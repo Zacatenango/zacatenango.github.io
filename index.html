@@ -1,1 +1,448 @@
-fgsfds! fgsfds!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Routine Tracker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .app-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        .task-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            transition: all 0.3s;
+        }
+        .task-item:hover {
+            background-color: #e9ecef;
+        }
+        .task-done {
+            background-color: #d4edda;
+        }
+        .task-done:hover {
+            background-color: #c3e6cb;
+        }
+        .chart-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .timer-running {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .summary-box {
+            background-color: #f0f7ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .streak-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #198754;
+        }
+    </style>
+</head>
+<body>
+    <div class="container app-container">
+        <h1 class="text-center mb-4">Night Routine Tracker</h1>
+        
+        <div class="summary-box">
+            <div class="row">
+                <div class="col-md-4">
+                    <p>Current Streak: <span id="currentStreak" class="streak-count">0</span> days</p>
+                </div>
+                <div class="col-md-4">
+                    <p>Completion Rate: <span id="completionRate">0%</span></p>
+                </div>
+                <div class="col-md-4">
+                    <p>Average Duration: <span id="averageDuration">0</span> min</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h3>Today's Routine <small id="currentDate" class="text-muted"></small></h3>
+                <div id="routineStatus" class="alert alert-info">
+                    Ready to start your routine
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <p>Current Timer: <span id="currentTimer">00:00</span></p>
+                <div class="btn-group">
+                    <button id="startRoutine" class="btn btn-primary">Start Routine</button>
+                    <button id="completeRoutine" class="btn btn-success" disabled>Complete Routine</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4>Routine Tasks</h4>
+                <div id="taskList">
+                    <!-- Tasks will be loaded here -->
+                </div>
+                
+                <div class="mt-3">
+                    <div class="input-group">
+                        <input type="text" id="newTaskInput" class="form-control" placeholder="Add new task">
+                        <button id="addTask" class="btn btn-outline-primary">Add Task</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h4>Compliance History</h4>
+            <canvas id="complianceChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        // Replace this with your own Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // App state variables
+        let tasks = [];
+        let routineStartTime = null;
+        let timerInterval = null;
+        let complianceData = [];
+        let complianceChart = null;
+        
+        // Initialize date
+        const today = new Date();
+        const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        $('#currentDate').text(dateString);
+
+        // Load tasks from Firebase
+        function loadTasks() {
+            database.ref('tasks').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                tasks = Object.keys(data).map(key => ({
+                    id: key,
+                    name: data[key].name,
+                    completed: data[key].completed || false
+                }));
+                renderTasks();
+            });
+        }
+
+        // Render tasks in the UI
+        function renderTasks() {
+            const taskListElement = $('#taskList');
+            taskListElement.empty();
+            
+            tasks.forEach(task => {
+                const taskElement = $(`
+                    <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
+                        <div class="form-check">
+                            <input class="form-check-input task-checkbox" type="checkbox" 
+                                   id="task-${task.id}" ${task.completed ? 'checked' : ''}>
+                            <label class="form-check-label" for="task-${task.id}">
+                                ${task.name}
+                            </label>
+                            <button class="btn btn-sm btn-outline-danger float-end delete-task">
+                                <i class="bi bi-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                `);
+                taskListElement.append(taskElement);
+            });
+            
+            // Add event listeners
+            $('.task-checkbox').on('change', function() {
+                const taskId = $(this).closest('.task-item').data('id');
+                const isCompleted = $(this).is(':checked');
+                updateTaskStatus(taskId, isCompleted);
+            });
+            
+            $('.delete-task').on('click', function() {
+                const taskId = $(this).closest('.task-item').data('id');
+                deleteTask(taskId);
+            });
+        }
+
+        // Add a new task
+        function addTask(taskName) {
+            const newTaskRef = database.ref('tasks').push();
+            newTaskRef.set({
+                name: taskName,
+                completed: false,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        // Update task status
+        function updateTaskStatus(taskId, isCompleted) {
+            database.ref(`tasks/${taskId}`).update({
+                completed: isCompleted
+            });
+        }
+
+        // Delete a task
+        function deleteTask(taskId) {
+            database.ref(`tasks/${taskId}`).remove();
+        }
+
+        // Start routine timer
+        function startRoutine() {
+            routineStartTime = new Date();
+            $('#startRoutine').prop('disabled', true);
+            $('#completeRoutine').prop('disabled', false);
+            $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
+                .html('Routine in progress... <span class="timer-running">Timer running</span>');
+            
+            // Reset all task checkboxes
+            tasks.forEach(task => {
+                updateTaskStatus(task.id, false);
+            });
+            
+            // Start timer
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // Update timer display
+        function updateTimer() {
+            if (!routineStartTime) return;
+            
+            const now = new Date();
+            const elapsedMs = now - routineStartTime;
+            const minutes = Math.floor(elapsedMs / 60000);
+            const seconds = Math.floor((elapsedMs % 60000) / 1000);
+            
+            $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        }
+
+        // Complete routine
+        function completeRoutine() {
+            if (!routineStartTime) return;
+            
+            clearInterval(timerInterval);
+            const endTime = new Date();
+            const durationMinutes = Math.round((endTime - routineStartTime) / 60000);
+            
+            // Count completed tasks
+            const completedCount = tasks.filter(task => task.completed).length;
+            const completionPercent = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+            
+            // Save routine record to Firebase
+            const routineRecord = {
+                date: dateString,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                durationMinutes: durationMinutes,
+                tasksCompleted: completedCount,
+                totalTasks: tasks.length,
+                completionRate: completionPercent
+            };
+            
+            database.ref('routineHistory').push(routineRecord);
+            
+            // Reset UI
+            $('#startRoutine').prop('disabled', false);
+            $('#completeRoutine').prop('disabled', true);
+            $('#routineStatus').removeClass('alert-warning').addClass('alert-success')
+                .html(`Routine completed! <strong>${durationMinutes} minutes</strong> with ${completionPercent}% tasks completed`);
+            
+            routineStartTime = null;
+            loadComplianceData();
+        }
+
+        // Load compliance data for the chart
+        function loadComplianceData() {
+            database.ref('routineHistory').orderByChild('timestamp').limitToLast(30)
+                .once('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    complianceData = Object.values(data);
+                    
+                    // Calculate streaks and averages
+                    calculateStats(complianceData);
+                    
+                    // Render chart
+                    renderComplianceChart(complianceData);
+                });
+        }
+
+        // Calculate stats from compliance data
+        function calculateStats(data) {
+            // Sort by timestamp
+            data.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Calculate current streak
+            let currentStreak = 0;
+            const msPerDay = 24 * 60 * 60 * 1000;
+            
+            for (let i = data.length - 1; i >= 0; i--) {
+                if (i === data.length - 1) {
+                    // Check if latest record is from today
+                    const recordDate = new Date(data[i].timestamp);
+                    const today = new Date();
+                    if (today.toDateString() === recordDate.toDateString()) {
+                        currentStreak = 1;
+                    } else {
+                        const dayDiff = Math.floor((today - recordDate) / msPerDay);
+                        if (dayDiff > 1) break; // Streak broken
+                        currentStreak = 1;
+                    }
+                } else {
+                    const currentDate = new Date(data[i].timestamp);
+                    const prevDate = new Date(data[i+1].timestamp);
+                    const dayDiff = Math.floor((prevDate - currentDate) / msPerDay);
+                    
+                    if (dayDiff <= 1) {
+                        currentStreak++;
+                    } else {
+                        break; // Streak broken
+                    }
+                }
+            }
+            
+            $('#currentStreak').text(currentStreak);
+            
+            // Calculate completion rate
+            if (data.length > 0) {
+                const totalCompletionRate = data.reduce((sum, record) => sum + record.completionRate, 0);
+                const avgCompletionRate = Math.round(totalCompletionRate / data.length);
+                $('#completionRate').text(`${avgCompletionRate}%`);
+                
+                // Calculate average duration
+                const totalDuration = data.reduce((sum, record) => sum + record.durationMinutes, 0);
+                const avgDuration = Math.round(totalDuration / data.length);
+                $('#averageDuration').text(avgDuration);
+            }
+        }
+
+        // Render compliance chart
+        function renderComplianceChart(data) {
+            // Prepare data for chart
+            const labels = data.map(record => record.date);
+            const durations = data.map(record => record.durationMinutes);
+            const completionRates = data.map(record => record.completionRate);
+            
+            const ctx = document.getElementById('complianceChart').getContext('2d');
+            
+            if (complianceChart) {
+                complianceChart.destroy();
+            }
+            
+            complianceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Duration (minutes)',
+                            data: durations,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Completion Rate (%)',
+                            data: completionRates,
+                            type: 'line',
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Duration (minutes)'
+                            }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            max: 100,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Completion Rate (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        $(document).ready(function() {
+            // Load initial data
+            loadTasks();
+            loadComplianceData();
+            
+            // Add task button
+            $('#addTask').on('click', function() {
+                const taskName = $('#newTaskInput').val().trim();
+                if (taskName) {
+                    addTask(taskName);
+                    $('#newTaskInput').val('');
+                }
+            });
+            
+            // Enter key on input
+            $('#newTaskInput').on('keypress', function(e) {
+                if (e.which === 13) {
+                    const taskName = $(this).val().trim();
+                    if (taskName) {
+                        addTask(taskName);
+                        $(this).val('');
+                    }
+                }
+            });
+            
+            // Start routine button
+            $('#startRoutine').on('click', startRoutine);
+            
+            // Complete routine button
+            $('#completeRoutine').on('click', completeRoutine);
+        });
+    </script>
+</body>
+</html>
