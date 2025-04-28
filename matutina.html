@@ -65,7 +65,7 @@
 </head>
 <body>
     <div class="container app-container">
-        <h1 class="text-center mb-4">Night Routine Tracker</h1>
+        <h1 class="text-center mb-4">Morning Routine Tracker</h1>
         
         <div class="summary-box">
             <div class="row">
@@ -150,7 +150,7 @@
 
         // Load tasks from Firebase
         function loadTasks() {
-            database.ref('tasks').on('value', (snapshot) => {
+            database.ref('matutina').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
                 tasks = Object.keys(data).map(key => ({
                     id: key,
@@ -199,7 +199,7 @@
 
         // Add a new task
         function addTask(taskName) {
-            const newTaskRef = database.ref('tasks').push();
+            const newTaskRef = database.ref('matutina').push();
             newTaskRef.set({
                 name: taskName,
                 completed: false,
@@ -209,14 +209,14 @@
 
         // Update task status
         function updateTaskStatus(taskId, isCompleted) {
-            database.ref(`tasks/${taskId}`).update({
+            database.ref(`matutina/${taskId}`).update({
                 completed: isCompleted
             });
         }
 
         // Delete a task
         function deleteTask(taskId) {
-            database.ref(`tasks/${taskId}`).remove();
+            database.ref(`matutina/${taskId}`).remove();
         }
 
         // Start routine timer
@@ -271,7 +271,7 @@
                 completionRate: completionPercent
             };
             
-            database.ref('routineHistory').push(routineRecord);
+            database.ref('historial_rutina').push(routineRecord);
             
             // Reset UI
             $('#startRoutine').prop('disabled', false);
@@ -285,7 +285,7 @@
 
         // Load compliance data for the chart
         function loadComplianceData() {
-            database.ref('routineHistory').orderByChild('timestamp').limitToLast(30)
+            database.ref('historial_rutina').orderByChild('timestamp').limitToLast(30)
                 .once('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     complianceData = Object.values(data);
