@@ -109,6 +109,113 @@
       font-weight: bold;
     }
   </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Tab functionality
+    function openTab(evt, tabName) {
+      var i, tabcontent, tablinks;
+      tabcontent = document.getElementsByClassName("tabcontent");
+      for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+      }
+      tablinks = document.getElementsByClassName("tablinks");
+      for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+      }
+      document.getElementById(tabName).style.display = "block";
+      evt.currentTarget.className += " active";
+    }
+
+    // Add game to Firebase
+    function addGame() {
+      const gameData = {
+        date: document.getElementById("game-date").value,
+        champion: document.getElementById("champion").value,
+        role: document.getElementById("role").value,
+        result: document.getElementById("result").value,
+        gameLength: document.getElementById("game-length").value,
+        totalCS: document.getElementById("total-cs").value,
+        kills: document.getElementById("kills").value,
+        deaths: document.getElementById("deaths").value,
+        assists: document.getElementById("assists").value,
+        visionScore: document.getElementById("vision-score").value,
+        objectives: document.getElementById("objectives").value,
+        mentalState: document.getElementById("mental-state").value,
+        notes: document.getElementById("game-notes").value
+      };
+
+      firebase.database().ref('games').push(gameData)
+        .then(() => alert("Game added successfully!"))
+        .catch(error => console.error("Error adding game:", error));
+    }
+
+    // Save champion progress to Firebase
+    function saveChampionProgress() {
+      const championProgress = {
+        tristana: {
+          skill1: document.getElementById("trist-skill1").value,
+          note1: document.getElementById("trist-note1").value,
+          skill2: document.getElementById("trist-skill2").value,
+          note2: document.getElementById("trist-note2").value,
+          skill3: document.getElementById("trist-skill3").value,
+          note3: document.getElementById("trist-note3").value,
+          skill4: document.getElementById("trist-skill4").value,
+          note4: document.getElementById("trist-note4").value,
+          skill5: document.getElementById("trist-skill5").value,
+          note5: document.getElementById("trist-note5").value
+        },
+        shyvana: {
+          skill1: document.getElementById("shyv-skill1").value,
+          note1: document.getElementById("shyv-note1").value,
+          skill2: document.getElementById("shyv-skill2").value,
+          note2: document.getElementById("shyv-note2").value,
+          skill3: document.getElementById("shyv-skill3").value,
+          note3: document.getElementById("shyv-note3").value,
+          skill4: document.getElementById("shyv-skill4").value,
+          note4: document.getElementById("shyv-note4").value,
+          skill5: document.getElementById("shyv-skill5").value,
+          note5: document.getElementById("shyv-note5").value
+        }
+      };
+
+      firebase.database().ref('championProgress').set(championProgress)
+        .then(() => alert("Champion progress saved successfully!"))
+        .catch(error => console.error("Error saving champion progress:", error));
+    }
+
+    // Add mental entry to Firebase
+    function addMentalEntry() {
+      const mentalData = {
+        date: document.getElementById("mental-date").value,
+        preMood: document.getElementById("pre-mood").value,
+        postMood: document.getElementById("post-mood").value,
+        tiltLevel: document.getElementById("tilt-level").value,
+        gamesBeforeBreak: document.getElementById("games-break").value,
+        notes: document.getElementById("mental-notes").value
+      };
+
+      firebase.database().ref('mentalEntries').push(mentalData)
+        .then(() => alert("Mental entry added successfully!"))
+        .catch(error => console.error("Error adding mental entry:", error));
+    }
+  </script>
 </head>
 <body>
   <div class="container">
@@ -486,20 +593,80 @@
       document.getElementById(tabName).style.display = "block";
       evt.currentTarget.className += " active";
     }
-    
-    // Mock functions for demo - in real implementation, these would save data to localStorage or a database
+
+    // Add game to Firebase
     function addGame() {
-      alert("Game added! In a real implementation, this would save to localStorage or a database.");
+      const gameData = {
+        date: document.getElementById("game-date").value,
+        champion: document.getElementById("champion").value,
+        role: document.getElementById("role").value,
+        result: document.getElementById("result").value,
+        gameLength: document.getElementById("game-length").value,
+        totalCS: document.getElementById("total-cs").value,
+        kills: document.getElementById("kills").value,
+        deaths: document.getElementById("deaths").value,
+        assists: document.getElementById("assists").value,
+        visionScore: document.getElementById("vision-score").value,
+        objectives: document.getElementById("objectives").value,
+        mentalState: document.getElementById("mental-state").value,
+        notes: document.getElementById("game-notes").value
+      };
+
+      firebase.database().ref('games').push(gameData)
+        .then(() => alert("Game added successfully!"))
+        .catch(error => console.error("Error adding game:", error));
     }
-    
+
+    // Save champion progress to Firebase
     function saveChampionProgress() {
-      alert("Champion progress saved! In a real implementation, this would save to localStorage or a database.");
+      const championProgress = {
+        tristana: {
+          skill1: document.getElementById("trist-skill1").value,
+          note1: document.getElementById("trist-note1").value,
+          skill2: document.getElementById("trist-skill2").value,
+          note2: document.getElementById("trist-note2").value,
+          skill3: document.getElementById("trist-skill3").value,
+          note3: document.getElementById("trist-note3").value,
+          skill4: document.getElementById("trist-skill4").value,
+          note4: document.getElementById("trist-note4").value,
+          skill5: document.getElementById("trist-skill5").value,
+          note5: document.getElementById("trist-note5").value
+        },
+        shyvana: {
+          skill1: document.getElementById("shyv-skill1").value,
+          note1: document.getElementById("shyv-note1").value,
+          skill2: document.getElementById("shyv-skill2").value,
+          note2: document.getElementById("shyv-note2").value,
+          skill3: document.getElementById("shyv-skill3").value,
+          note3: document.getElementById("shyv-note3").value,
+          skill4: document.getElementById("shyv-skill4").value,
+          note4: document.getElementById("shyv-note4").value,
+          skill5: document.getElementById("shyv-skill5").value,
+          note5: document.getElementById("shyv-note5").value
+        }
+      };
+
+      firebase.database().ref('championProgress').set(championProgress)
+        .then(() => alert("Champion progress saved successfully!"))
+        .catch(error => console.error("Error saving champion progress:", error));
     }
-    
+
+    // Add mental entry to Firebase
     function addMentalEntry() {
-      alert("Mental entry added! In a real implementation, this would save to localStorage or a database.");
+      const mentalData = {
+        date: document.getElementById("mental-date").value,
+        preMood: document.getElementById("pre-mood").value,
+        postMood: document.getElementById("post-mood").value,
+        tiltLevel: document.getElementById("tilt-level").value,
+        gamesBeforeBreak: document.getElementById("games-break").value,
+        notes: document.getElementById("mental-notes").value
+      };
+
+      firebase.database().ref('mentalEntries').push(mentalData)
+        .then(() => alert("Mental entry added successfully!"))
+        .catch(error => console.error("Error adding mental entry:", error));
     }
-    
+
     // Initialize tabs
     document.getElementById("Dashboard").style.display = "block";
   </script>
