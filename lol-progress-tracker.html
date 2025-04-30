@@ -156,79 +156,113 @@
         openTab(event, $(this).text().replace(/\s+/g, ''));
       });
 
-      // Add game to Firebase
-      $("#game-form button").click(function() {
-        const gameData = {
-          date: $("#game-date").val(),
-          champion: $("#champion").val(),
-          role: $("#role").val(),
-          result: $("#result").val(),
-          gameLength: $("#game-length").val(),
-          totalCS: $("#total-cs").val(),
-          kills: $("#kills").val(),
-          deaths: $("#deaths").val(),
-          assists: $("#assists").val(),
-          visionScore: $("#vision-score").val(),
-          objectives: $("#objectives").val(),
-          mentalState: $("#mental-state").val(),
-          notes: $("#game-notes").val()
-        };
-
-        firebase.database().ref('games').push(gameData)
-          .then(() => alert("Game added successfully!"))
-          .catch(error => console.error("Error adding game:", error));
-      });
-
-      // Save champion progress to Firebase
-      $("#ChampionProgress button").click(function() {
-        const championProgress = {
-          tristana: {
-            skill1: $("#trist-skill1").val(),
-            note1: $("#trist-note1").val(),
-            skill2: $("#trist-skill2").val(),
-            note2: $("#trist-note2").val(),
-            skill3: $("#trist-skill3").val(),
-            note3: $("#trist-note3").val(),
-            skill4: $("#trist-skill4").val(),
-            note4: $("#trist-note4").val(),
-            skill5: $("#trist-skill5").val(),
-            note5: $("#trist-note5").val()
-          },
-          shyvana: {
-            skill1: $("#shyv-skill1").val(),
-            note1: $("#shyv-note1").val(),
-            skill2: $("#shyv-skill2").val(),
-            note2: $("#shyv-note2").val(),
-            skill3: $("#shyv-skill3").val(),
-            note3: $("#shyv-note3").val(),
-            skill4: $("#shyv-skill4").val(),
-            note4: $("#shyv-note4").val(),
-            skill5: $("#shyv-skill5").val(),
-            note5: $("#shyv-note5").val()
-          }
-        };
-
-        firebase.database().ref('championProgress').set(championProgress)
-          .then(() => alert("Champion progress saved successfully!"))
-          .catch(error => console.error("Error saving champion progress:", error));
-      });
-
-      // Add mental entry to Firebase
-      $("#mental-form button").click(function() {
-        const mentalData = {
-          date: $("#mental-date").val(),
-          preMood: $("#pre-mood").val(),
-          postMood: $("#post-mood").val(),
-          tiltLevel: $("#tilt-level").val(),
-          gamesBeforeBreak: $("#games-break").val(),
-          notes: $("#mental-notes").val()
-        };
-
-        firebase.database().ref('mentalEntries').push(mentalData)
-          .then(() => alert("Mental entry added successfully!"))
-          .catch(error => console.error("Error adding mental entry:", error));
-      });
+      // Load initial data
+      loadGameHistory();
+      loadMentalHistory();
     });
+
+    // Function to load game history from Firebase
+    function loadGameHistory() {
+      firebase.database().ref('games').orderByChild('date').limitToLast(50).once('value')
+        .then((snapshot) => {
+          const games = [];
+          snapshot.forEach((childSnapshot) => {
+            games.unshift({...childSnapshot.val()});
+          });
+          
+          const gameHistoryTable = $('#game-history');
+          const tbody = gameHistoryTable.find('tbody');
+          tbody.empty();
+          
+          // Add header row back
+          tbody.append(`
+            <tr>
+              <th>Date</th>
+              <th>Champion</th>
+              <th>Role</th>
+              <th>Result</th>
+              <th>Length</th>
+              <th>CS</th>
+              <th>CS/min</th>
+              <th>KDA</th>
+              <th>Vision</th>
+              <th>Objectives</th>
+              <th>Mental</th>
+            </tr>
+          `);
+          
+          if (games.length === 0) {
+            tbody.append('<tr><td colspan="11">No games recorded yet</td></tr>');
+          } else {
+            games.forEach(game => {
+              const csPerMin = (game.totalCS / game.gameLength).toFixed(1);
+              const kda = ((parseInt(game.kills) + parseInt(game.assists)) / Math.max(1, parseInt(game.deaths))).toFixed(2);
+              
+              tbody.append(`
+                <tr>
+                  <td>${game.date}</td>
+                  <td>${game.champion}</td>
+                  <td>${game.role}</td>
+                  <td>${game.result}</td>
+                  <td>${game.gameLength}</td>
+                  <td>${game.totalCS}</td>
+                  <td>${csPerMin}</td>
+                  <td>${kda} (${game.kills}/${game.deaths}/${game.assists})</td>
+                  <td>${game.visionScore}</td>
+                  <td>${game.objectives}</td>
+                  <td>${game.mentalState}</td>
+                </tr>
+              `);
+            });
+          }
+        })
+        .catch(error => console.error("Error loading game history:", error));
+    }
+
+    // Function to load mental game history from Firebase
+    function loadMentalHistory() {
+      firebase.database().ref('mentalEntries').orderByChild('date').limitToLast(50).once('value')
+        .then((snapshot) => {
+          const entries = [];
+          snapshot.forEach((childSnapshot) => {
+            entries.unshift({...childSnapshot.val()});
+          });
+          
+          const mentalHistoryTable = $('#mental-history');
+          const tbody = mentalHistoryTable.find('tbody');
+          tbody.empty();
+          
+          // Add header row back
+          tbody.append(`
+            <tr>
+              <th>Date</th>
+              <th>Pre-Mood</th>
+              <th>Post-Mood</th>
+              <th>Tilt Level</th>
+              <th>Games Before Break</th>
+              <th>Notes</th>
+            </tr>
+          `);
+          
+          if (entries.length === 0) {
+            tbody.append('<tr><td colspan="6">No entries recorded yet</td></tr>');
+          } else {
+            entries.forEach(entry => {
+              tbody.append(`
+                <tr>
+                  <td>${entry.date}</td>
+                  <td>${entry.preMood}</td>
+                  <td>${entry.postMood}</td>
+                  <td>${entry.tiltLevel}</td>
+                  <td>${entry.gamesBeforeBreak}</td>
+                  <td>${entry.notes}</td>
+                </tr>
+              `);
+            });
+          }
+        })
+        .catch(error => console.error("Error loading mental history:", error));
+    }
 
     // Function to save champion progress
     function saveChampionProgress() {
@@ -267,39 +301,49 @@
     // Function to add a mental entry
     function addMentalEntry() {
       const mentalData = {
-        date: $("#mental-date").val(),
-        preMood: $("#pre-mood").val(),
-        postMood: $("#post-mood").val(),
-        tiltLevel: $("#tilt-level").val(),
-        gamesBeforeBreak: $("#games-break").val(),
-        notes: $("#mental-notes").val()
+        date: document.getElementById("mental-date").value,
+        preMood: document.getElementById("pre-mood").value,
+        postMood: document.getElementById("post-mood").value,
+        tiltLevel: document.getElementById("tilt-level").value,
+        gamesBeforeBreak: document.getElementById("games-break").value,
+        notes: document.getElementById("mental-notes").value
       };
 
       firebase.database().ref('mentalEntries').push(mentalData)
-        .then(() => alert("Mental entry added successfully!"))
+        .then(() => {
+          alert("Mental entry added successfully!");
+          loadMentalHistory(); // Reload the mental history table
+          // Clear the form
+          document.getElementById("mental-form").reset();
+        })
         .catch(error => console.error("Error adding mental entry:", error));
     }
 
     // Function to add a game
     function addGame() {
       const gameData = {
-        date: $("#game-date").val(),
-        champion: $("#champion").val(),
-        role: $("#role").val(),
-        result: $("#result").val(),
-        gameLength: $("#game-length").val(),
-        totalCS: $("#total-cs").val(),
-        kills: $("#kills").val(),
-        deaths: $("#deaths").val(),
-        assists: $("#assists").val(),
-        visionScore: $("#vision-score").val(),
-        objectives: $("#objectives").val(),
-        mentalState: $("#mental-state").val(),
-        notes: $("#game-notes").val()
+        date: document.getElementById("game-date").value,
+        champion: document.getElementById("champion").value,
+        role: document.getElementById("role").value,
+        result: document.getElementById("result").value,
+        gameLength: document.getElementById("game-length").value,
+        totalCS: document.getElementById("total-cs").value,
+        kills: document.getElementById("kills").value,
+        deaths: document.getElementById("deaths").value,
+        assists: document.getElementById("assists").value,
+        visionScore: document.getElementById("vision-score").value,
+        objectives: document.getElementById("objectives").value,
+        mentalState: document.getElementById("mental-state").value,
+        notes: document.getElementById("game-notes").value
       };
 
       firebase.database().ref('games').push(gameData)
-        .then(() => alert("Game added successfully!"))
+        .then(() => {
+          alert("Game added successfully!");
+          loadGameHistory(); // Reload the game history table
+          // Clear the form
+          document.getElementById("game-form").reset();
+        })
         .catch(error => console.error("Error adding game:", error));
     }
   </script>
@@ -436,22 +480,24 @@
       
       <h3>Game History</h3>
       <table id="game-history">
-        <tr>
-          <th>Date</th>
-          <th>Champion</th>
-          <th>Role</th>
-          <th>Result</th>
-          <th>Length</th>
-          <th>CS</th>
-          <th>CS/min</th>
-          <th>KDA</th>
-          <th>Vision</th>
-          <th>Objectives</th>
-          <th>Mental</th>
-        </tr>
-        <tr>
-          <td colspan="11">No games recorded yet</td>
-        </tr>
+        <tbody>
+          <tr>
+            <th>Date</th>
+            <th>Champion</th>
+            <th>Role</th>
+            <th>Result</th>
+            <th>Length</th>
+            <th>CS</th>
+            <th>CS/min</th>
+            <th>KDA</th>
+            <th>Vision</th>
+            <th>Objectives</th>
+            <th>Mental</th>
+          </tr>
+          <tr>
+            <td colspan="11">No games recorded yet</td>
+          </tr>
+        </tbody>
       </table>
     </div>
 
