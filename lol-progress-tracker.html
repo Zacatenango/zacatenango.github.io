@@ -118,13 +118,13 @@
     // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
-  authDomain: "misaplicaciones-a39bb.firebaseapp.com",
-  databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
-  projectId: "misaplicaciones-a39bb",
-  storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
-  messagingSenderId: "375780546756",
-  appId: "1:375780546756:web:c2aa74fc5982c87069d191",
-  measurementId: "G-QMSRRM9XL8"
+      authDomain: "misaplicaciones-a39bb.firebaseapp.com",
+      databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
+      projectId: "misaplicaciones-a39bb",
+      storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
+      messagingSenderId: "375780546756",
+      appId: "1:375780546756:web:c2aa74fc5982c87069d191",
+      measurementId: "G-QMSRRM9XL8"
     };
 
     // Initialize Firebase
@@ -233,6 +233,79 @@
           .catch(error => console.error("Error adding mental entry:", error));
       });
     });
+
+    // Function to save champion progress
+    function saveChampionProgress() {
+      const championProgress = {
+        tristana: {
+          skill1: $("#trist-skill1").val(),
+          note1: $("#trist-note1").val(),
+          skill2: $("#trist-skill2").val(),
+          note2: $("#trist-note2").val(),
+          skill3: $("#trist-skill3").val(),
+          note3: $("#trist-note3").val(),
+          skill4: $("#trist-skill4").val(),
+          note4: $("#trist-note4").val(),
+          skill5: $("#trist-skill5").val(),
+          note5: $("#trist-note5").val()
+        },
+        shyvana: {
+          skill1: $("#shyv-skill1").val(),
+          note1: $("#shyv-note1").val(),
+          skill2: $("#shyv-skill2").val(),
+          note2: $("#shyv-note2").val(),
+          skill3: $("#shyv-skill3").val(),
+          note3: $("#shyv-note3").val(),
+          skill4: $("#shyv-skill4").val(),
+          note4: $("#shyv-note4").val(),
+          skill5: $("#shyv-skill5").val(),
+          note5: $("#shyv-note5").val()
+        }
+      };
+
+      firebase.database().ref('championProgress').set(championProgress)
+        .then(() => alert("Champion progress saved successfully!"))
+        .catch(error => console.error("Error saving champion progress:", error));
+    }
+
+    // Function to add a mental entry
+    function addMentalEntry() {
+      const mentalData = {
+        date: $("#mental-date").val(),
+        preMood: $("#pre-mood").val(),
+        postMood: $("#post-mood").val(),
+        tiltLevel: $("#tilt-level").val(),
+        gamesBeforeBreak: $("#games-break").val(),
+        notes: $("#mental-notes").val()
+      };
+
+      firebase.database().ref('mentalEntries').push(mentalData)
+        .then(() => alert("Mental entry added successfully!"))
+        .catch(error => console.error("Error adding mental entry:", error));
+    }
+
+    // Function to add a game
+    function addGame() {
+      const gameData = {
+        date: $("#game-date").val(),
+        champion: $("#champion").val(),
+        role: $("#role").val(),
+        result: $("#result").val(),
+        gameLength: $("#game-length").val(),
+        totalCS: $("#total-cs").val(),
+        kills: $("#kills").val(),
+        deaths: $("#deaths").val(),
+        assists: $("#assists").val(),
+        visionScore: $("#vision-score").val(),
+        objectives: $("#objectives").val(),
+        mentalState: $("#mental-state").val(),
+        notes: $("#game-notes").val()
+      };
+
+      firebase.database().ref('games').push(gameData)
+        .then(() => alert("Game added successfully!"))
+        .catch(error => console.error("Error adding game:", error));
+    }
   </script>
 </head>
 <body>
