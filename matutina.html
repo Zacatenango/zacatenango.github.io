@@ -692,20 +692,6 @@
             // Complete routine button
             $('#completeRoutine').on('click', completeRoutine);
 
-            // Handle pause/resume keyboard shortcuts
-            $(document).on('keydown', function(e) {
-                if (e.key === ' ' || e.key === 'Spacebar') { // Spacebar
-                    e.preventDefault(); // Prevent page scroll
-                    if (routineStartTime) {
-                        if (isPaused) {
-                            resumeTimer();
-                        } else {
-                            pauseTimer();
-                        }
-                    }
-                }
-            });
-
             // Save interruption button
             $('#save-interruption').on('click', saveInterruption);
 
