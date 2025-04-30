@@ -285,6 +285,23 @@
             border-radius: 4px;
             transition: width 0.3s ease;
         }
+
+        .visualization-card {
+            height: 350px;
+            min-height: 350px;
+            max-height: 400px;
+            overflow: hidden;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        canvas {
+            max-height: 300px !important;
+        }
     </style>
 </head>
 <body>
@@ -1409,7 +1426,13 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -1462,7 +1485,13 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -1575,7 +1604,13 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -1627,6 +1662,14 @@
                     }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1,  // Use 1 for doughnut chart to maintain circular shape
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
                 }
             });
         }
@@ -1840,7 +1883,51 @@
         }
 
         $(document).ready(function() {
+            // Initialize Bootstrap modals
+            interruptionModal = new bootstrap.Modal(document.getElementById('interruptionModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            
+            recoveryModal = new bootstrap.Modal(document.getElementById('recoveryModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Initialize UI components
             initializeUI();
+            
+            // Update event handlers for modal triggers with proper this binding
+            $(document).on('click', '.interrupt-btn', function(e) {
+                e.preventDefault();
+                showInterruptionModal.call(this);
+            });
+
+            $(document).on('click', '.recovery-option', function(e) {
+                e.preventDefault();
+                const type = $(this).data('recovery-type');
+                currentRecoveryMethod = type;
+                $(`input[name="recovery-method"][value="${type}"]`).prop('checked', true);
+                recoveryModal.show();
+            });
+
+            // Modal event listeners for proper cleanup
+            $('#interruptionModal').on('hidden.bs.modal', function() {
+                // Reset modal state when hidden
+                $('#interruption-start-area').show();
+                $('#interruption-active-area').hide();
+                $('#interruption-start-buttons').show();
+                $('#interruption-active-buttons').hide();
+                $('#time-expired-alert').hide();
+            });
+
+            $('#recoveryModal').on('hidden.bs.modal', function() {
+                // Reset modal state when hidden
+                $('#recovery-selection-area').show();
+                $('#recovery-step-area').hide();
+                $('#recovery-selection-buttons').show();
+                $('#recovery-step-buttons').hide();
+            });
         });
 
         // Add CSS for keyboard focus
