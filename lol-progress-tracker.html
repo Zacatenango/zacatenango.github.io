@@ -152,12 +152,8 @@
 
     $(document).ready(function() {
       // Tab functionality
-      $(".tablinks").click(function() {
-        var tabName = $(this).text();
-        $(".tabcontent").hide();
-        $(".tablinks").removeClass("active");
-        $("#" + tabName).show();
-        $(this).addClass("active");
+      $(".tablinks").click(function(event) {
+        openTab(event, $(this).text().replace(/\s+/g, ''));
       });
 
       // Add game to Firebase
@@ -672,6 +668,7 @@
   <script>
     // Initialize tabs
     document.getElementById("Dashboard").style.display = "block";
+    document.querySelector(".tablinks").classList.add("active");
   </script>
 </body>
 </html>
