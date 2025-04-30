@@ -107,14 +107,17 @@
         
         <div class="summary-box">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <p>Current Streak: <span id="currentStreak" class="streak-count">0</span> days</p>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <p>Completion Rate: <span id="completionRate">0%</span></p>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <p>Average Duration: <span id="averageDuration">0</span> min</p>
+                </div>
+                <div class="col-md-3">
+                    <p>Time to First Task: <span id="timeToFirstTask">--:--</span></p>
                 </div>
             </div>
         </div>
@@ -217,6 +220,8 @@
         // App state variables
         let tasks = [];
         let routineStartTime = null;
+        let timeToFirstTask = null;  // Track time until first task completion
+        let firstTaskCompleted = false;
         let timerInterval = null;
         let complianceData = [];
         let complianceChart = null;
@@ -417,6 +422,13 @@
             const seconds = Math.floor((elapsedMs % 60000) / 1000);
 
             $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+
+            // Update time to first task if not yet completed
+            if (!firstTaskCompleted) {
+                const firstTaskMinutes = Math.floor(elapsedMs / 60000);
+                const firstTaskSeconds = Math.floor((elapsedMs % 60000) / 1000);
+                $('#timeToFirstTask').text(`${firstTaskMinutes.toString().padStart(2, '0')}:${firstTaskSeconds.toString().padStart(2, '0')}`);
+            }
         }
 
         // Sync timer state to Firebase
@@ -497,7 +509,8 @@
                 tasksCompleted: completedCount,
                 totalTasks: tasks.length,
                 completionRate: completionPercent,
-                totalPausedTimeMinutes: Math.round(totalPausedTime / 60000)
+                totalPausedTimeMinutes: Math.round(totalPausedTime / 60000),
+                timeToFirstTaskMs: timeToFirstTask || null  // Save time to first task
             };
 
             historialRutinaRef.push(routineRecord);
@@ -591,6 +604,7 @@
             const labels = data.map(record => record.date);
             const durations = data.map(record => record.durationMinutes);
             const completionRates = data.map(record => record.completionRate);
+            const firstTaskTimes = data.map(record => record.timeToFirstTaskMs ? Math.round(record.timeToFirstTaskMs / 60000) : null);
             
             const ctx = document.getElementById('complianceChart').getContext('2d');
             
@@ -619,6 +633,15 @@
                             borderColor: 'rgba(255, 99, 132, 1)',
                             borderWidth: 2,
                             yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Time to First Task (minutes)',
+                            data: firstTaskTimes,
+                            type: 'line',
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            yAxisID: 'y'
                         }
                     ]
                 },
@@ -630,7 +653,7 @@
                             position: 'left',
                             title: {
                                 display: true,
-                                text: 'Duration (minutes)'
+                                text: 'Minutes'
                             }
                         },
                         y1: {
@@ -768,6 +791,13 @@
             const taskIndex = tasks.findIndex(t => t.id === taskId);
             if (taskIndex !== -1) {
                 tasks[taskIndex].completed = isCompleted;
+
+                // Track time to first task completion
+                if (isCompleted && !firstTaskCompleted && routineStartTime) {
+                    firstTaskCompleted = true;
+                    const now = new Date();
+                    timeToFirstTask = (now - routineStartTime) - totalPausedTime;
+                }
             }
             
             // Update UI
