@@ -149,6 +149,11 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // Initialize date
+        const today = new Date();
+        const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        $('#currentDate').text(dateString);
+
         // Global Firebase database references
         const historialRutinaRef = database.ref('historial_rutina');
         const matutinaRef = database.ref('matutina');
@@ -538,7 +543,110 @@
 
             // Complete routine button
             $('#completeRoutine').on('click', completeRoutine);
+
+            // Handle pause/resume keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Spacebar') { // Spacebar
+                    e.preventDefault(); // Prevent page scroll
+                    if (routineStartTime) {
+                        if (isPaused) {
+                            resumeTimer();
+                        } else {
+                            pauseTimer();
+                        }
+                    }
+                }
+            });
         });
+
+        // Load tasks from Firebase
+        function loadTasks() {
+            matutinaRef.once('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                tasks = Object.keys(data).map(key => ({
+                    id: key,
+                    name: data[key].name,
+                    completed: data[key].completed || false
+                }));
+                renderTasks();
+            });
+        }
+
+        // Render tasks in the UI
+        function renderTasks() {
+            const taskListElement = $('#taskList');
+            taskListElement.empty();
+            
+            if (tasks.length === 0) {
+                taskListElement.append('<p class="text-muted">No tasks added yet. Add your first task below.</p>');
+                return;
+            }
+            
+            tasks.forEach(task => {
+                const taskElement = $(`
+                    <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
+                        <div class="form-check">
+                            <input class="form-check-input task-checkbox" type="checkbox" 
+                                   id="task-${task.id}" ${task.completed ? 'checked' : ''}>
+                            <label class="form-check-label" for="task-${task.id}">
+                                ${task.name}
+                            </label>
+                            <button class="btn btn-sm btn-outline-danger float-end delete-task">
+                                <i class="bi bi-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                `);
+                taskListElement.append(taskElement);
+            });
+            
+            // Add event listeners for checkboxes and delete buttons
+            $('.task-checkbox').on('change', function() {
+                const taskId = $(this).closest('.task-item').data('id');
+                const isCompleted = $(this).is(':checked');
+                updateTaskStatus(taskId, isCompleted);
+            });
+            
+            $('.delete-task').on('click', function() {
+                const taskId = $(this).closest('.task-item').data('id');
+                deleteTask(taskId);
+            });
+        }
+
+        // Update task status
+        function updateTaskStatus(taskId, isCompleted) {
+            matutinaRef.child(taskId).update({
+                completed: isCompleted
+            });
+            
+            // Update local tasks array
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = isCompleted;
+            }
+            
+            // Update UI
+            $(`#task-${taskId}`).closest('.task-item').toggleClass('task-done', isCompleted);
+        }
+
+        // Delete a task
+        function deleteTask(taskId) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                matutinaRef.child(taskId).remove();
+                tasks = tasks.filter(t => t.id !== taskId);
+                renderTasks();
+            }
+        }
+
+        // Add a new task
+        function addTask(taskName) {
+            const newTaskRef = matutinaRef.push();
+            newTaskRef.set({
+                name: taskName,
+                completed: false,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
     </script>
 </body>
 </html>
