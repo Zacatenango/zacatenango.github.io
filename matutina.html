@@ -72,6 +72,33 @@
             font-weight: bold;
             color: #198754;
         }
+        .interruption-form {
+            display: none;
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+        }
+        .interruption-form.visible {
+            display: block;
+        }
+        .interruption-history {
+            margin-top: 20px;
+        }
+        .interruption-history table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .interruption-history th {
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .interruption-history td {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -97,6 +124,14 @@
                 <h3>Today's Routine <small id="currentDate" class="text-muted"></small></h3>
                 <div id="routineStatus" class="alert alert-info">
                     Ready to start your routine
+                </div>
+                <div id="interruption-form" class="interruption-form">
+                    <h5>Log Interruption</h5>
+                    <div class="form-group">
+                        <label for="interruption-reason">What interrupted you?</label>
+                        <textarea id="interruption-reason" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button id="save-interruption" class="btn btn-warning mt-2">Save Interruption</button>
                 </div>
             </div>
             <div class="col-md-6 text-end">
@@ -130,6 +165,25 @@
             <h4>Compliance History</h4>
             <canvas id="complianceChart"></canvas>
         </div>
+        
+        <div class="interruption-history">
+            <h4>Interruption History</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="interruption-log">
+                    <tr>
+                        <td colspan="4">No interruptions logged yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script type="module">
@@ -158,6 +212,7 @@
         const historialRutinaRef = database.ref('historial_rutina');
         const matutinaRef = database.ref('matutina');
         const timerStateRef = database.ref('timer_state');
+        const interruptionsRef = database.ref('interruptions');
 
         // App state variables
         let tasks = [];
@@ -168,6 +223,80 @@
         let isPaused = false;
         let totalPausedTime = 0;
         let lastPauseTime = null;
+        let currentInterruptionId = null;
+
+        // Load interruptions from Firebase
+        function loadInterruptions() {
+            interruptionsRef.orderByChild('timestamp').limitToLast(50).once('value')
+                .then((snapshot) => {
+                    const interruptions = [];
+                    snapshot.forEach((childSnapshot) => {
+                        interruptions.unshift({...childSnapshot.val()});
+                    });
+                    
+                    const tbody = $('#interruption-log');
+                    tbody.empty();
+                    
+                    if (interruptions.length === 0) {
+                        tbody.append('<tr><td colspan="4">No interruptions logged yet</td></tr>');
+                    } else {
+                        interruptions.forEach(interruption => {
+                            const date = new Date(interruption.timestamp);
+                            const formattedDate = date.toLocaleDateString();
+                            const formattedTime = date.toLocaleTimeString();
+                            const duration = Math.round(interruption.duration / 60000); // Convert ms to minutes
+                            
+                            tbody.append(`
+                                <tr>
+                                    <td>${formattedDate}</td>
+                                    <td>${formattedTime}</td>
+                                    <td>${duration} min</td>
+                                    <td>${interruption.reason}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+                });
+        }
+
+        function showInterruptionForm() {
+            $('#interruption-form').addClass('visible');
+            $('#interruption-reason').val('').focus();
+        }
+
+        function hideInterruptionForm() {
+            $('#interruption-form').removeClass('visible');
+            $('#interruption-reason').val('');
+        }
+
+        function saveInterruption() {
+            const reason = $('#interruption-reason').val().trim();
+            if (!reason) {
+                alert('Please provide a reason for the interruption');
+                return;
+            }
+            
+            const now = new Date();
+            const duration = now - lastPauseTime;
+            
+            const interruption = {
+                timestamp: now.getTime(),
+                reason: reason,
+                duration: duration,
+                routineId: routineStartTime.getTime()
+            };
+            
+            currentInterruptionId = interruptionsRef.push().key;
+            interruptionsRef.child(currentInterruptionId).set(interruption)
+                .then(() => {
+                    hideInterruptionForm();
+                    loadInterruptions();
+                })
+                .catch(error => {
+                    console.error("Error saving interruption:", error);
+                    alert('Error saving interruption. Please try again.');
+                });
+        }
 
         // Start routine timer
         function startRoutine() {
@@ -241,6 +370,9 @@
             updateButtonStates();
             $('#routineStatus').html('Routine paused... <span class="timer-paused">Timer paused</span>');
             
+            // Show interruption form
+            showInterruptionForm();
+            
             // Update Firebase state
             timerStateRef.update({
                 paused: true,
@@ -251,6 +383,9 @@
         function resumeTimer() {
             if (!routineStartTime || !isPaused) return;
             
+            // Hide interruption form if visible
+            hideInterruptionForm();
+            
             // Calculate paused duration
             const now = new Date();
             const pauseDuration = now - lastPauseTime;
@@ -258,6 +393,7 @@
             
             isPaused = false;
             lastPauseTime = null;
+            currentInterruptionId = null;
             
             updateButtonStates();
             $('#routineStatus').html('Routine in progress... <span class="timer-running">Timer running</span>');
@@ -512,6 +648,9 @@
             loadComplianceData();
             loadTimerState();
 
+            // Load interruptions on page load
+            loadInterruptions();
+
             // Add task button
             $('#addTask').on('click', function() {
                 const taskName = $('#newTaskInput').val().trim();
@@ -555,6 +694,17 @@
                             pauseTimer();
                         }
                     }
+                }
+            });
+
+            // Save interruption button
+            $('#save-interruption').on('click', saveInterruption);
+
+            // Handle Enter key in interruption reason textarea
+            $('#interruption-reason').on('keypress', function(e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    saveInterruption();
                 }
             });
         });
