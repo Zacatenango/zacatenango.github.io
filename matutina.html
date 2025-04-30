@@ -447,6 +447,15 @@
                     
                     if (isPaused && state.lastPauseTime) {
                         lastPauseTime = new Date(state.lastPauseTime);
+                        // Calculate and display current elapsed time for paused state
+                        const now = new Date();
+                        const elapsedMs = (now - routineStartTime) - totalPausedTime;
+                        const minutes = Math.floor(elapsedMs / 60000);
+                        const seconds = Math.floor((elapsedMs % 60000) / 1000);
+                        $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                        
+                        // Show interruption form when loading in paused state
+                        showInterruptionForm();
                     }
                     
                     updateButtonStates();
