@@ -131,6 +131,25 @@
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Tab functionality
+    function openTab(event, tabName) {
+      // Hide all tab content
+      const tabContents = document.getElementsByClassName("tabcontent");
+      for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].style.display = "none";
+      }
+
+      // Remove the active class from all tab buttons
+      const tabLinks = document.getElementsByClassName("tablinks");
+      for (let i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+      }
+
+      // Show the current tab and add the active class to the clicked button
+      document.getElementById(tabName).style.display = "block";
+      event.currentTarget.className += " active";
+    }
+
     $(document).ready(function() {
       // Tab functionality
       $(".tablinks").click(function() {
@@ -221,7 +240,7 @@
     <h1>League of Legends Progress Tracker</h1>
     
     <div class="tab">
-      <button class="tablinks active" onclick="openTab(event, 'Dashboard')">Dashboard</button>
+      <button class="tablinks" onclick="openTab(event, 'Dashboard')">Dashboard</button>
       <button class="tablinks" onclick="openTab(event, 'GameLog')">Game Log</button>
       <button class="tablinks" onclick="openTab(event, 'ChampionProgress')">Champion Progress</button>
       <button class="tablinks" onclick="openTab(event, 'MentalTracker')">Mental Tracker</button>
