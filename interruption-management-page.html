@@ -699,7 +699,7 @@
             $('.recovery-option').click(function() {
                 currentRecoveryMethod = $(this).data('recovery-type');
                 $('input[name="recovery-method"][value="' + currentRecoveryMethod + '"]').prop('checked', true);
-                $('#recoveryModal').modal('show');
+                recoveryModal.show();
             });
             
             // Initialize tooltips
