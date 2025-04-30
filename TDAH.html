@@ -79,6 +79,14 @@
          text-align: center;
          margin: 20px 0;
       }
+      .chart-container {
+         position: relative;
+         height: 100%;
+         width: 100%;
+      }
+      canvas {
+         max-height: 300px !important;
+      }
    </style>
 </head>
 <body>
@@ -389,7 +397,20 @@
             },
             options: {
                responsive: true,
-               maintainAspectRatio: false,
+               maintainAspectRatio: true,
+               aspectRatio: 2,
+               plugins: {
+                  legend: {
+                     position: 'top'
+                  },
+                  tooltip: {
+                     callbacks: {
+                        label: function(context) {
+                           return `Completion: ${Math.round(context.raw)}%`;
+                        }
+                     }
+                  }
+               },
                scales: {
                   y: {
                      beginAtZero: true,
@@ -403,15 +424,6 @@
                      title: {
                         display: true,
                         text: 'Date'
-                     }
-                  }
-               },
-               plugins: {
-                  tooltip: {
-                     callbacks: {
-                        label: function(context) {
-                           return `Completion: ${Math.round(context.raw)}%`;
-                        }
                      }
                   }
                }

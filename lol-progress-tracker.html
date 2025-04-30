@@ -73,6 +73,13 @@
     }
     canvas {
       margin: 20px 0;
+      max-height: 300px !important;
+    }
+    .chart-container {
+      position: relative;
+      height: 350px;
+      max-height: 400px;
+      overflow: hidden;
     }
     .notes {
       width: 100%;
@@ -993,6 +1000,30 @@
     // Initialize tabs
     document.getElementById("Dashboard").style.display = "block";
     document.querySelector(".tablinks").classList.add("active");
+
+    // In progressChart options
+    const progressChartOptions = {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2,
+      plugins: {
+        legend: {
+          position: 'top'
+        }
+      }
+    };
+
+    // In mentalChart options
+    const mentalChartOptions = {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2,
+      plugins: {
+        legend: {
+          position: 'top'
+        }
+      }
+    };
   </script>
 </body>
 </html>

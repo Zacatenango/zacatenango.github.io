@@ -45,6 +45,10 @@
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: relative;
+            height: 350px;
+            max-height: 400px;
+            overflow: hidden;
         }
         .timer-running {
             color: #dc3545;
@@ -98,6 +102,9 @@
         .interruption-history td {
             padding: 8px;
             border-bottom: 1px solid #dee2e6;
+        }
+        canvas {
+            max-height: 300px !important;
         }
     </style>
 </head>
@@ -647,6 +654,13 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
