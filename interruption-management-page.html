@@ -1709,6 +1709,49 @@
             return step && step.buffer;
         }
 
+        // Reset today's routine
+        function resetTodayRoutine() {
+            if (confirm('Are you sure you want to reset today\'s routine progress?')) {
+                // Clear local tracking
+                completedSteps = [];
+                startTimes = {};
+                completionTimes = {};
+                activeStep = null;
+                interruptionActive = false;
+                interruptionStartTime = null;
+                bookmarkedStep = null;
+                
+                // Clear timers
+                Object.keys(timers).forEach(timerId => {
+                    clearInterval(timers[timerId]);
+                });
+                timers = {};
+                
+                // Reset UI
+                $('.step-card').removeClass('active completed interrupted bookmarked');
+                $('.bookmark-indicator').hide();
+                $('.timer').text('00:00');
+                $('.start-btn').prop('disabled', false);
+                $('.complete-btn').prop('disabled', true);
+                $('.interrupt-btn').prop('disabled', false);
+                
+                // Reset progress bar and stats
+                interruptionCount = 0;
+                recoveryCount = 0;
+                updateProgressBar();
+                updateStats();
+                
+                // Clear Firebase data for today
+                database.ref(`routineData/${today}`).remove()
+                    .then(() => {
+                        console.log('Today\'s data reset successfully');
+                    })
+                    .catch(error => {
+                        console.error('Error resetting data:', error);
+                    });
+            }
+        }
+
         function handleInterruption(type, reason) {
             // If in buffer zone, handle differently
             if (isInBufferZone()) {
