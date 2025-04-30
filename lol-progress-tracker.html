@@ -425,9 +425,14 @@
 
     // Function to add a game
     function addGame() {
+      const championSelect = document.getElementById("champion");
+      const championValue = championSelect.value === "Other" 
+        ? document.getElementById("other-champion").value 
+        : championSelect.value;
+
       const gameData = {
         date: document.getElementById("game-date").value,
-        champion: document.getElementById("champion").value,
+        champion: championValue,
         role: document.getElementById("role").value,
         result: document.getElementById("result").value,
         gameLength: document.getElementById("game-length").value,
@@ -447,8 +452,18 @@
           loadGameHistory(); // Reload the game history table
           // Clear the form
           document.getElementById("game-form").reset();
+          document.getElementById("other-champion").style.display = "none";
         })
         .catch(error => console.error("Error adding game:", error));
+    }
+
+    function toggleOtherChampion() {
+      const championSelect = document.getElementById("champion");
+      const otherChampionInput = document.getElementById("other-champion");
+      otherChampionInput.style.display = championSelect.value === "Other" ? "block" : "none";
+      if (championSelect.value !== "Other") {
+        otherChampionInput.value = ""; // Clear the input when hidden
+      }
     }
   </script>
 </head>
@@ -524,11 +539,12 @@
             <td><input type="date" id="game-date"></td>
             <td>Champion:</td>
             <td>
-              <select id="champion">
+              <select id="champion" onchange="toggleOtherChampion()">
                 <option value="Tristana">Tristana</option>
                 <option value="Shyvana">Shyvana</option>
                 <option value="Other">Other</option>
               </select>
+              <input type="text" id="other-champion" style="display: none; margin-top: 5px;" placeholder="Enter champion name">
             </td>
           </tr>
           <tr>
