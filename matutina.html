@@ -211,7 +211,7 @@
         function updateButtonStates() {
             $('#startRoutine').prop('disabled', routineStartTime !== null);
             $('#completeRoutine').prop('disabled', !routineStartTime || isPaused);
-            $('#pauseRoutine').prop('disabled', !routineStartTime || !isPaused);
+            $('#pauseRoutine').prop('disabled', !routineStartTime || isPaused);
             $('#resumeRoutine').prop('disabled', !routineStartTime || !isPaused);
             
             // Show/hide buttons based on state
