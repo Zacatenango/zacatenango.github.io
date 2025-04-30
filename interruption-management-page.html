@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADHD Morning Routine with Interruption Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+        .step-card {
+            cursor: pointer;
+            position: relative;
+        }
+        .step-card.completed {
+            background-color: #d4edda;
+        }
+        .step-card.active {
+            border: 2px solid #007bff;
+        }
+        .step-card.interrupted {
+            border: 2px dashed #dc3545;
+            background-color: #fff8f8;
+        }
+        .step-card.hard-core {
+            border-left: 5px solid #6f42c1;
+        }
+        .timer {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .step-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            padding: 0;
+            line-height: 40px;
+            margin-left: 8px;
+        }
+        .date-display {
+            font-size: 1.2rem;
+            text-align: right;
+            color: #6c757d;
+        }
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .badge-hard-core {
+            background-color: #6f42c1;
+            color: white;
+            font-weight: normal;
+        }
+        .badge-soft-shell {
+            background-color: #17a2b8;
+            color: white;
+            font-weight: normal;
+        }
+        .interruption-card {
+            border-left: 5px solid #dc3545;
+        }
+        .recovery-card {
+            border-left: 5px solid #28a745;
+        }
+        .bookmark-indicator {
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 40px;
+            background-color: #ffc107;
+            border-radius: 4px;
+            display: none;
+        }
+        .interruption-log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .modal-header, .modal-footer {
+            border: none;
+        }
+        .buffer-zone {
+            background-color: #f1f8ff;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px dashed #007bff;
+        }
+        #interruption-timer {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        #recovery-step-area {
+            display: none;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+        }
+        .visualization-card {
+            height: 350px;
+        }
+        .recovery-option {
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+        .recovery-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .recovery-option.quick-reset {
+            background-color: #e8f5e9;
+            border-left: 5px solid #4caf50;
+        }
+        .recovery-option.standard-reset {
+            background-color: #e3f2fd;
+            border-left: 5px solid #2196f3;
+        }
+        .recovery-option.full-reset {
+            background-color: #f3e5f5;
+            border-left: 5px solid #9c27b0;
+        }
+        .tooltip-inner {
+            max-width: 300px;
+        }
+        .step-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.8rem;
+        }
+        .recovery-protocol {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            max-width: 400px;
+            z-index: 1050;
+        }
+
+        .recovery-step {
+            text-align: center;
+        }
+
+        .bookmark-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background-color: #ffc107;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .buffer-zone-timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            text-align: center;
+            z-index: 1040;
+        }
+
+        .timer-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1060;
+        }
+
+        .toast {
+            background: white;
+            margin-bottom: 10px;
+        }
+
+        .step-card.interrupted {
+            border-left: 4px solid #ffc107;
+            background-color: #fff8e1;
+        }
+
+        .step-card.bookmarked {
+            position: relative;
+        }
+
+        .bookmark-content {
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #ffc107;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .recovery-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            background-color: #28a745;
+            color: white;
+        }
+
+        .hard-core-step {
+            border-left: 4px solid #6f42c1;
+        }
+
+        .soft-shell-step {
+            border-left: 4px solid #17a2b8;
+        }
+
+        .buffer-zone {
+            background-color: #e3f2fd;
+            border: 1px dashed #2196f3;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        #recoveryProgress {
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="header-area">
+            <h1 class="mb-0">ADHD Morning Routine</h1>
+            <div class="date-display" id="current-date"></div>
+        </div>
+        
+        <p class="lead">Track your progress, manage interruptions, and stay on course with your morning routine.</p>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Today's Progress</h5>
+                <div class="progress mb-3">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="stat-value" id="completed-steps">0</div>
+                        <div class="stat-label">Steps Completed</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-value" id="interruption-count">0</div>
+                        <div class="stat-label">Interruptions</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-value" id="recovery-count">0</div>
+                        <div class="stat-label">Recoveries</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="routine-tab" data-bs-toggle="tab" data-bs-target="#routine" type="button" role="tab" aria-controls="routine" aria-selected="true">Routine</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="interruptions-tab" data-bs-toggle="tab" data-bs-target="#interruptions" type="button" role="tab" aria-controls="interruptions" aria-selected="false">Interruptions</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab" aria-controls="analytics" aria-selected="false">Analytics</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="mainTabsContent">
+            <!-- Routine Tab -->
+            <div class="tab-pane fade show active" id="routine" role="tabpanel" aria-labelledby="routine-tab">
+                <div id="routine-steps"></div>
+                
+                <div class="text-center mt-4 mb-4">
+                    <button id="reset-routine" class="btn btn-warning">Reset Today's Routine</button>
+                </div>
+            </div>
+            
+            <!-- Interruptions Tab -->
+            <div class="tab-pane fade" id="interruptions" role="tabpanel" aria-labelledby="interruptions-tab">
+                <div class="card interruption-card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Interruption Log</h5>
+                        <div class="interruption-log" id="interruption-log">
+                            <p class="text-center text-muted">No interruptions recorded today.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card recovery-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Recovery Methods</h5>
+                        <p>Choose the appropriate recovery method based on the interruption duration:</p>
+                        
+                        <div class="recovery-option quick-reset" data-recovery-type="quick">
+                            <h6>30-Second Reset</h6>
+                            <p class="mb-0">Take a deep breath, look at your tracker, and state what comes next.</p>
+                            <small class="text-muted">For brief interruptions</small>
+                        </div>
+                        
+                        <div class="recovery-option standard-reset" data-recovery-type="standard">
+                            <h6>2-Minute Reset</h6>
+                            <p class="mb-0">Splash cold water on face, quick body shake, and return to routine.</p>
+                            <small class="text-muted">For moderate interruptions</small>
+                        </div>
+                        
+                        <div class="recovery-option full-reset" data-recovery-type="full">
+                            <h6>5-Minute Restart</h6>
+                            <p class="mb-0">Brief meditation, review entire remaining routine, begin where you left off.</p>
+                            <small class="text-muted">For major interruptions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Tab -->
+            <div class="tab-pane fade" id="analytics" role="tabpanel" aria-labelledby="analytics-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card visualization-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Routine Completion</h5>
+                                <div class="d-flex mb-3">
+                                    <div class="flex-grow-1">
+                                        <p>Track your progress over time:</p>
+                                    </div>
+                                    <div>
+                                        <select id="graph-range" class="form-select form-select-sm">
+                                            <option value="7">Last 7 days</option>
+                                            <option value="14">Last 14 days</option>
+                                            <option value="30">Last 30 days</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <canvas id="completion-graph"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card visualization-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Interruption Analysis</h5>
+                                <canvas id="interruption-graph"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Interruption Patterns</h5>
+                        <p>Understanding when and how your routine gets interrupted can help you develop better strategies.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Most Common Interruption Times</h6>
+                                <canvas id="interruption-times-chart"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Most Interrupted Steps</h6>
+                                <canvas id="interrupted-steps-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Interruption Modal -->
+    <div class="modal fade" id="interruptionModal" tabindex="-1" aria-labelledby="interruptionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="interruptionModalLabel">Handling Interruption</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="interruption-start-area">
+                        <p><strong>You're about to pause your routine to handle an interruption.</strong></p>
+                        <p>Please categorize this interruption:</p>
+                        
+                        <select id="interruption-type" class="form-select mb-3">
+                            <option value="urgent">Urgent Issue (can't wait)</option>
+                            <option value="delivery">Package/Delivery</option>
+                            <option value="call">Phone Call/Meeting</option>
+                            <option value="chore">Unexpected Chore</option>
+                            <option value="other">Other Interruption</option>
+                        </select>
+                        
+                        <div class="mb-3">
+                            <label for="interruption-notes" class="form-label">Optional notes:</label>
+                            <textarea id="interruption-notes" class="form-control" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="time-bound-check">
+                            <label class="form-check-label" for="time-bound-check">
+                                Time-bound this interruption
+                            </label>
+                        </div>
+                        
+                        <div id="time-bound-section" class="mb-3" style="display: none;">
+                            <label for="time-bound-minutes" class="form-label">Minutes to allocate:</label>
+                            <input type="number" id="time-bound-minutes" class="form-control" min="1" max="60" value="10">
+                        </div>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <strong>Bookmark and Bridge:</strong> "I am stopping at <span id="current-step-name">this step</span>, and when I return I will continue with <span id="next-step-name">the next step</span>."
+                        </div>
+                    </div>
+                    
+                    <div id="interruption-active-area" style="display: none;">
+                        <div class="text-center mb-4">
+                            <h4>Interruption in Progress</h4>
+                            <div id="interruption-timer">00:00</div>
+                            <p class="text-muted" id="time-bound-message" style="display: none;">Time allocated: <span id="allocated-time">10</span> minutes</p>
+                        </div>
+                        
+                        <div class="alert alert-warning" id="time-expired-alert" style="display: none;" role="alert">
+                            <strong>Time Expired!</strong> You've exceeded your allocated time for this interruption.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <div id="interruption-start-buttons">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="start-interruption-btn">Start Interruption</button>
+                    </div>
+                    <div id="interruption-active-buttons" style="display: none; width: 100%;">
+                        <button type="button" class="btn btn-success w-100" id="end-interruption-btn">End Interruption & Return to Routine</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recovery Modal -->
+    <div class="modal fade" id="recoveryModal" tabindex="-1" aria-labelledby="recoveryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="recoveryModalLabel">Return to Routine</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="recovery-selection-area">
+                        <p><strong>Select a recovery method based on the interruption duration:</strong></p>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="recovery-method" id="quick-reset" value="quick" checked>
+                            <label class="form-check-label" for="quick-reset">
+                                <strong>30-Second Reset</strong> (Brief interruption)
+                                <div class="text-muted small">Take a deep breath, look at your tracker, and state what comes next.</div>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="recovery-method" id="standard-reset" value="standard">
+                            <label class="form-check-label" for="standard-reset">
+                                <strong>2-Minute Reset</strong> (Moderate interruption)
+                                <div class="text-muted small">Splash cold water on face, quick body shake, and return to routine.</div>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="recovery-method" id="full-reset" value="full">
+                            <label class="form-check-label" for="full-reset">
+                                <strong>5-Minute Restart</strong> (Major interruption)
+                                <div class="text-muted small">Brief meditation, review entire remaining routine, begin where you left off.</div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="recovery-step-area">
+                        <h5 id="recovery-method-title">30-Second Reset</h5>
+                        <div id="recovery-step-content"></div>
+                        <div class="progress mt-3 mb-2">
+                            <div id="recovery-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="text-center text-muted" id="recovery-timer">00:00</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div id="recovery-selection-buttons">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" id="start-recovery-btn">Start Recovery</button>
+                    </div>
+                    <div id="recovery-step-buttons" style="display: none; width: 100%;">
+                        <button type="button" class="btn btn-primary w-100" id="complete-recovery-btn">Complete & Return to Routine</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container for bookmarks -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+    <!-- Recovery Protocol UI -->
+    <div id="recovery-protocol" class="recovery-protocol" style="display: none;">
+        <div class="recovery-step">
+            <h4 id="recoveryStepTitle"></h4>
+            <div id="recoveryStepContent"></div>
+            <div class="progress mt-3">
+                <div id="recoveryProgress" class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bookmark Visual Indicator -->
+    <div id="bookmarkIndicator" class="bookmark-indicator" style="display: none;">
+        <div class="bookmark-content">
+            <span class="bookmark-label">Bookmarked</span>
+        </div>
+    </div>
+
+    <!-- Buffer Zone Timer -->
+    <div id="bufferZoneTimer" class="buffer-zone-timer" style="display: none;">
+        <div class="timer-display">
+            <span id="bufferTimeRemaining">5:00</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            // Replace with your Firebase config
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Morning routine steps with hard-core/soft-shell classification
+        const routineSteps = [
+            { id: 'step1', name: 'Take medication', target: 1, priority: 'hard-core', buffer: false },
+            { id: 'step2', name: 'Drink full glass of water', target: 1, priority: 'hard-core', buffer: false },
+            { id: 'buffer1', name: 'Buffer Zone (5 min)', target: 5, priority: 'buffer', buffer: true },
+            { id: 'step3', name: 'Stretching exercises', target: 2, priority: 'soft-shell', buffer: false },
+            { id: 'step4', name: 'Cold water face splash/shower', target: 2, priority: 'soft-shell', buffer: false },
+            { id: 'buffer2', name: 'Buffer Zone (5 min)', target: 5, priority: 'buffer', buffer: true },
+            { id: 'step5', name: 'Get dressed', target: 5, priority: 'soft-shell', buffer: false },
+            { id: 'step6', name: 'Protein-rich breakfast', target: 10, priority: 'hard-core', buffer: false },
+            { id: 'buffer3', name: 'Buffer Zone (5 min)', target: 5, priority: 'buffer', buffer: true },
+            { id: 'step7', name: 'Plan your day', target: 5, priority: 'soft-shell', buffer: false }
+        ];
+
+        // Variables for tracking
+        let activeStep = null;
+        let interruptedStep = null;
+        let bookmarkedStep = null;
+        let timers = {};
+        let startTimes = {};
+        let completionTimes = {};
+        let completedSteps = [];
+        let interruptionActive = false;
+        let interruptionStartTime = null;
+        let interruptionTimer = null;
+        let recoveryTimer = null;
+        let interruptionCount = 0;
+        let recoveryCount = 0;
+        let recoverySteps = {
+            'quick': ['Take a deep breath', 'Look at your routine tracker', 'State aloud: "I will now continue with [next step]"'],
+            'standard': ['Splash cold water on your face', 'Do 10 seconds of quick body movement/shaking', 'Take 3 deep breaths', 'Look at your routine tracker', 'Return to where you left off'],
+            'full': ['Sit comfortably and close your eyes', 'Take 5 deep breaths', 'Visualize completing your routine successfully', 'Review the remaining steps in your routine', 'Set an intention to complete your routine', 'Return to where you left off']
+        };
+        let currentRecoveryStep = 0;
+        let currentRecoveryMethod = 'quick';
+        
+        const today = new Date().toISOString().split('T')[0];
+
+        // Bootstrap components initialization
+        let interruptionModal;
+        let recoveryModal;
+
+        // Initialize UI and components
+        function initializeUI() {
+            updateDateDisplay();
+            initializeRoutineSteps();
+            loadTodayProgress();
+            loadHistoricalData();
+            
+            // Initialize modals
+            interruptionModal = new bootstrap.Modal(document.getElementById('interruptionModal'));
+            recoveryModal = new bootstrap.Modal(document.getElementById('recoveryModal'));
+            
+            // Event listeners
+            $('#graph-range').change(loadHistoricalData);
+            $('#reset-routine').click(resetTodayRoutine);
+            $('#time-bound-check').change(function() {
+                $('#time-bound-section').toggle(this.checked);
+            });
+            
+            // Interruption modal event listeners
+            $('#start-interruption-btn').click(startInterruption);
+            $('#end-interruption-btn').click(endInterruption);
+            
+            // Recovery modal event listeners
+            $('input[name="recovery-method"]').change(function() {
+                currentRecoveryMethod = $('input[name="recovery-method"]:checked').val();
+            });
+            $('#start-recovery-btn').click(startRecovery);
+            $('#complete-recovery-btn').click(completeRecovery);
+            
+            // Recovery options in interruptions tab
+            $('.recovery-option').click(function() {
+                currentRecoveryMethod = $(this).data('recovery-type');
+                $('input[name="recovery-method"][value="' + currentRecoveryMethod + '"]').prop('checked', true);
+                $('#recoveryModal').modal('show');
+            });
+            
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Keyboard shortcuts
+            $(document).keydown(function(e) {
+                // Alt + I to show interruption modal
+                if (e.altKey && e.key === 'i') {
+                    if (activeStep) {
+                        $(`button.interrupt-btn[data-step="${activeStep}"]`).click();
+                    }
+                }
+                
+                // Alt + R to start recovery
+                if (e.altKey && e.key === 'r') {
+                    if (interruptionActive) {
+                        $('#end-interruption-btn').click();
+                    }
+                }
+                
+                // Alt + B to bookmark current position
+                if (e.altKey && e.key === 'b') {
+                    if (activeStep) {
+                        bookmarkCurrentPosition();
+                    }
+                }
+            });
+
+            // Autosave routine state every 30 seconds
+            setInterval(function() {
+                if (activeStep) {
+                    saveRoutineState();
+                }
+            }, 30000);
+
+            // Initialize accessibility features
+            initializeA11y();
+            
+            // Initialize sound notifications
+            initializeSoundNotifications();
+        }
+
+        // Update date display
+        function updateDateDisplay() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            $('#current-date').text(new Date().toLocaleDateString('en-US', options));
+        }
+
+        // Initialize routine steps UI
+        function initializeRoutineSteps() {
+            const stepsContainer = $('#routine-steps');
+            stepsContainer.empty();
+
+            routineSteps.forEach((step, index) => {
+                // For buffer zones, create a different UI element
+                if (step.buffer) {
+                    const bufferCard = $(`
+                        <div class="buffer-zone mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">${step.name}</h6>
+                                    <small class="text-muted">Use this time to handle any interruptions</small>
+                                </div>
+                                <div class="timer" id="timer-${step.id}">00:00</div>
+                            </div>
+                        </div>
+                    `);
+                    stepsContainer.append(bufferCard);
+                    return;
+                }
+                
+                // Create priority badge based on step type
+                let priorityBadge = '';
+                if (step.priority === 'hard-core') {
+                    priorityBadge = '<span class="badge badge-hard-core">Hard Core</span>';
+                } else if (step.priority === 'soft-shell') {
+                    priorityBadge = '<span class="badge badge-soft-shell">Soft Shell</span>';
+                }
+                
+                const stepCard = $(`
+                    <div class="card step-card mb-3 ${step.priority === 'hard-core' ? 'hard-core' : ''}" id="${step.id}" data-index="${index}">
+                        <div class="bookmark-indicator"></div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h5 class="card-title">${index + 1}. ${step.name} ${priorityBadge}</h5>
+                                    <p class="card-text">Target: ${step.target} min</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="timer" id="timer-${step.id}">00:00</div>
+                                </div>
+                                <div class="col-md-3 step-actions">
+                                    <button class="btn btn-danger btn-circle interrupt-btn" data-bs-toggle="tooltip" title="Pause for interruption" data-step="${step.id}">
+                                        <i class="fas fa-pause">⏸</i>
+                                    </button>
+                                    <button class="btn btn-primary btn-circle start-btn" data-bs-toggle="tooltip" title="Start this step" data-step="${step.id}">
+                                        <i class="fas fa-play">▶</i>
+                                    </button>
+                                    <button class="btn btn-success btn-circle complete-btn" data-bs-toggle="tooltip" title="Complete this step" data-step="${step.id}" disabled>
+                                        <i class="fas fa-check">✓</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                stepsContainer.append(stepCard);
+            });
+
+            // Attach event handlers
+            $('.start-btn').click(startStep);
+            $('.complete-btn').click(completeStep);
+            $('.interrupt-btn').click(showInterruptionModal);
+        }
+
+        // Start tracking a step
+        function startStep() {
+            const stepId = $(this).data('step');
+            
+            // If there's already an active step, pause it
+            if (activeStep && activeStep !== stepId) {
+                pauseStep(activeStep);
+            }
+            
+            activeStep = stepId;
+            
+            // Get the current time
+            startTimes[stepId] = startTimes[stepId] || Date.now();
+            
+            // Update UI
+            $(`#${stepId}`).addClass('active');
+            $(this).prop('disabled', true);
+            $(`button.complete-btn[data-step="${stepId}"]`).prop('disabled', false);
+            
+            // Start timer
+            timers[stepId] = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - startTimes[stepId]) / 1000);
+                const minutes = Math.floor(elapsedSeconds / 60);
+                const seconds = elapsedSeconds % 60;
+                $(`#timer-${stepId}`).text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }, 1000);
+
+            // Play sound if entering/leaving buffer zone
+            const step = routineSteps.find(s => s.id === stepId);
+            if (step && step.buffer) {
+                playSound('bufferStart');
+            }
+        }
+
+        // Pause tracking a step
+        function pauseStep(stepId) {
+            clearInterval(timers[stepId]);
+            $(`#${stepId}`).removeClass('active');
+            $(`button.start-btn[data-step="${stepId}"]`).prop('disabled', false);
+            $(`button.complete-btn[data-step="${stepId}"]`).prop('disabled', true);
+            activeStep = null;
+        }
+
+        // Complete a step
+        function completeStep() {
+            const stepId = $(this).data('step');
+            
+            // Stop the timer
+            clearInterval(timers[stepId]);
+            
+            // Calculate completion time
+            const completionTime = (Date.now() - startTimes[stepId]) / 1000 / 60; // in minutes
+            completionTimes[stepId] = completionTime;
+            
+            // Update UI
+            $(`#${stepId}`).removeClass('active').addClass('completed');
+            $(this).prop('disabled', true);
+            $(`button.start-btn[data-step="${stepId}"]`).prop('disabled', true);
+            $(`button.interrupt-btn[data-step="${stepId}"]`).prop('disabled', true);
+            
+            // Add to completed steps
+            if (!completedSteps.includes(stepId)) {
+                completedSteps.push(stepId);
+            }
+            
+            // Update progress bar and stats
+            updateProgressBar();
+            updateStats();
+            
+            // Save to Firebase
+            saveStepCompletion(stepId, completionTime);
+            
+            activeStep = null;
+            
+            // Auto-start next non-completed step if available
+            const currentIndex = routineSteps.findIndex(s => s.id === stepId);
+            if (currentIndex < routineSteps.length - 1) {
+                for (let i = currentIndex + 1; i < routineSteps.length; i++) {
+                    const nextStep = routineSteps[i];
+                    if (!completedSteps.includes(nextStep.id) && !nextStep.buffer) {
+                        setTimeout(() => {
+                            $(`button.start-btn[data-step="${nextStep.id}"]`).click();
+                        }, 1000);
+                        break;
+                    }
+                }
+            }
+
+            // Play sound if completing buffer zone
+            const step = routineSteps.find(s => s.id === stepId);
+            if (step && step.buffer) {
+                playSound('bufferEnd');
+            }
+        }
+
+        // Show interruption modal
+        function showInterruptionModal() {
+            const stepId = $(this).data('step');
+            interruptedStep = stepId;
+            
+            // Set the current and next step names
+            const currentStepIndex = routineSteps.findIndex(s => s.id === stepId);
+            $('#current-step-name').text(routineSteps[currentStepIndex].name);
+            
+            // Find the next uncompleted step
+            let nextStepName = "the end of your routine";
+            for (let i = currentStepIndex + 1; i < routineSteps.length; i++) {
+                if (!completedSteps.includes(routineSteps[i].id) && !routineSteps[i].buffer) {
+                    nextStepName = routineSteps[i].name;
+                    break;
+                }
+            }
+            $('#next-step-name').text(nextStepName);
+            
+            // Reset form
+            $('#interruption-type').val('urgent');
+            $('#interruption-notes').val('');
+            $('#time-bound-check').prop('checked', false);
+            $('#time-bound-section').hide();
+            $('#time-bound-minutes').val('10');
+            
+            // Show the right areas
+            $('#interruption-start-area').show();
+            $('#interruption-active-area').hide();
+            $('#interruption-start-buttons').show();
+            $('#interruption-active-buttons').hide();
+            $('#time-expired-alert').hide();
+            
+            interruptionModal.show();
+
+            // Play interruption sound
+            playSound('interruption');
+        }
+
+        // Start interruption
+        function startInterruption() {
+            // If there was an active step, pause it
+            if (activeStep) {
+                pauseStep(activeStep);
+            }
+            
+            // Mark the step as interrupted in UI
+            $(`#${interruptedStep}`).addClass('interrupted');
+            $(`#${interruptedStep} .bookmark-indicator`).show();
+            
+            // Set bookmarked step
+            bookmarkedStep = interruptedStep;
+            
+            // Record interruption data
+            const interruptionType = $('#interruption-type').val();
+            const interruptionNotes = $('#interruption-notes').val();
+            const timeBound = $('#time-bound-check').prop('checked');
+            const timeBoundMinutes = parseInt($('#time-bound-minutes').val()) || 10;
+            
+            // Update UI
+            $('#interruption-start-area').hide();
+            $('#interruption-active-area').show();
+            $('#interruption-start-buttons').hide();
+            $('#interruption-active-buttons').show();
+            
+            if (timeBound) {
+                $('#time-bound-message').show();
+                $('#allocated-time').text(timeBoundMinutes);
+            } else {
+                $('#time-bound-message').hide();
+            }
+            
+            // Start interruption timer
+            interruptionStartTime = Date.now();
+            interruptionActive = true;
+            interruptionTimer = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - interruptionStartTime) / 1000);
+                const minutes = Math.floor(elapsedSeconds / 60);
+                const seconds = elapsedSeconds % 60;
+                $('#interruption-timer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                
+                // Check if time bound has expired
+                if (timeBound && minutes >= timeBoundMinutes && $('#time-expired-alert').is(':hidden')) {
+                    $('#time-expired-alert').show();
+                    // Play notification sound if possible
+                    try {
+                        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+                        audio.play();
+                    } catch(e) {
+                        console.log('Sound notification not supported');
+                    }
+                }
+            }, 1000);
+            
+            // Save interruption to Firebase
+            saveInterruption(interruptionType, interruptionNotes, timeBound, timeBoundMinutes);
+            
+            // Increment interruption count
+            interruptionCount++;
+            updateStats();
+        }
+
+        // End interruption
+        function endInterruption() {
+            // Stop interruption timer
+            clearInterval(interruptionTimer);
+            
+            // Calculate duration
+            const duration = (Date.now() - interruptionStartTime) / 1000 / 60; // in minutes
+            
+            // Update Firebase with end time
+            const interruptionRef = database.ref(`routineData/${today}/interruptions`).push();
+            interruptionRef.update({
+                endTime: firebase.database.ServerValue.TIMESTAMP,
+                duration: duration
+            });
+            
+            // Close modal
+            interruptionModal.hide();
+            
+            // Show recovery modal
+            setTimeout(() => {
+                recoveryModal.show();
+            }, 500);
+            
+            interruptionActive = false;
+        }
+
+        // Start recovery process
+        function startRecovery() {
+            // Hide selection area and show step area
+            $('#recovery-selection-area').hide();
+            $('#recovery-step-area').show();
+            $('#recovery-selection-buttons').hide();
+            $('#recovery-step-buttons').show();
+            
+            // Set recovery method title
+            let methodTitle = '';
+            switch(currentRecoveryMethod) {
+                case 'quick': methodTitle = '30-Second Reset'; break;
+                case 'standard': methodTitle = '2-Minute Reset'; break;
+                case 'full': methodTitle = '5-Minute Restart'; break;
+            }
+            $('#recovery-method-title').text(methodTitle);
+            
+            // Reset current step
+            currentRecoveryStep = 0;
+            
+            // Show first recovery step
+            showCurrentRecoveryStep();
+            
+            // Start recovery timer
+            const startTime = Date.now();
+            recoveryTimer = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsedSeconds / 60);
+                const seconds = elapsedSeconds % 60;
+                $('#recovery-timer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }, 1000);
+        }
+
+        // Show current recovery step
+        function showCurrentRecoveryStep() {
+            const steps = recoverySteps[currentRecoveryMethod];
+            const totalSteps = steps.length;
+            
+            if (currentRecoveryStep < totalSteps) {
+                const stepContent = `
+                    <div class="alert alert-success">
+                        <h6>Step ${currentRecoveryStep + 1} of ${totalSteps}</h6>
+                        <p class="mb-0">${steps[currentRecoveryStep]}</p>
+                    </div>
+                `;
+                $('#recovery-step-content').html(stepContent);
+                
+                // Update progress bar
+                const progress = ((currentRecoveryStep + 1) / totalSteps) * 100;
+                $('#recovery-progress').css('width', `${progress}%`).attr('aria-valuenow', progress);
+                
+                // Automatically advance to next step after delay
+                const stepTimes = { 'quick': 10, 'standard': 20, 'full': 50 };
+                const timePerStep = stepTimes[currentRecoveryMethod] / totalSteps;
+                
+                setTimeout(() => {
+                    currentRecoveryStep++;
+                    if (currentRecoveryStep < totalSteps) {
+                        showCurrentRecoveryStep();
+                    } else {
+                        // Show completion message
+                        $('#recovery-step-content').html(`
+                            <div class="alert alert-success">
+                                <h6>Recovery Complete!</h6>
+                                <p class="mb-0">You're ready to return to your routine.</p>
+                            </div>
+                        `);
+                        $('#recovery-progress').css('width', '100%').attr('aria-valuenow', 100);
+                    }
+                }, timePerStep * 1000);
+            }
+        }
+
+        // Complete recovery
+        function completeRecovery() {
+            // Stop recovery timer
+            clearInterval(recoveryTimer);
+            
+            // Update stats
+            recoveryCount++;
+            updateStats();
+            
+            // Save recovery to Firebase
+            saveRecovery(currentRecoveryMethod);
+            
+            // Remove interrupted class and bookmark indicator
+            $(`#${bookmarkedStep}`).removeClass('interrupted');
+            $(`#${bookmarkedStep} .bookmark-indicator`).hide();
+            
+            // Close modal
+            recoveryModal.hide();
+            
+            // Resume routine at bookmarked step (if not completed)
+            if (bookmarkedStep && !completedSteps.includes(bookmarkedStep)) {
+                setTimeout(() => {
+                    $(`button.start-btn[data-step="${bookmarkedStep}"]`).click();
+                }, 500);
+            }
+        }
+
+        // Update progress bar
+        function updateProgressBar() {
+            // Count only non-buffer steps
+            const totalSteps = routineSteps.filter(step => !step.buffer).length;
+            const completedNonBufferSteps = completedSteps.filter(stepId => {
+                const step = routineSteps.find(s => s.id === stepId);
+                return step && !step.buffer;
+            }).length;
+            
+            const progress = (completedNonBufferSteps / totalSteps) * 100;
+            $('#progress-bar').css('width', `${progress}%`).attr('aria-valuenow', progress).text(`${Math.round(progress)}%`);
+        }
+
+        // Update stats display
+        function updateStats() {
+            // Count only non-buffer steps
+            const totalSteps = routineSteps.filter(step => !step.buffer).length;
+            const completedNonBufferSteps = completedSteps.filter(stepId => {
+                const step = routineSteps.find(s => s.id === stepId);
+                return step && !step.buffer;
+            }).length;
+            
+            $('#completed-steps').text(completedNonBufferSteps);
+            $('#interruption-count').text(interruptionCount);
+            $('#recovery-count').text(recoveryCount);
+        }
+
+        // Save step completion to Firebase
+        function saveStepCompletion(stepId, completionTime) {
+            const stepIndex = routineSteps.findIndex(s => s.id === stepId);
+            const stepRef = database.ref(`routineData/${today}/steps/${stepId}`);
+            stepRef.set({
+                completed: true,
+                completionTime: completionTime,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                name: routineSteps[stepIndex].name,
+                priority: routineSteps[stepIndex].priority
+            });
+
+            // Update daily summary
+            updateDailySummary();
+        }
+
+        // Save interruption to Firebase
+        function saveInterruption(type, notes, timeBound, timeBoundMinutes) {
+            const interruptionRef = database.ref(`routineData/${today}/interruptions`).push();
+            interruptionRef.set({
+                type: type,
+                notes: notes,
+                timeBound: timeBound,
+                timeBoundMinutes: timeBound ? timeBoundMinutes : null,
+                startTime: firebase.database.ServerValue.TIMESTAMP,
+                interruptedStep: interruptedStep,
+                interruptedStepName: routineSteps.find(s => s.id === interruptedStep).name
+            });
+            
+            // Update daily summary
+            updateDailySummary();
+            
+            // Update interruption log UI
+            addInterruptionToLog(type, routineSteps.find(s => s.id === interruptedStep).name);
+        }
+
+        // Save recovery to Firebase
+        function saveRecovery(method) {
+            const recoveryRef = database.ref(`routineData/${today}/recoveries`).push();
+            recoveryRef.set({
+                method: method,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                afterInterruptedStep: bookmarkedStep,
+                afterInterruptedStepName: routineSteps.find(s => s.id === bookmarkedStep).name
+            });
+            
+            // Update daily summary
+            updateDailySummary();
+        }
+
+        // Update daily summary
+        function updateDailySummary() {
+            // Count only non-buffer steps
+            const totalSteps = routineSteps.filter(step => !step.buffer).length;
+            const completedNonBufferSteps = completedSteps.filter(stepId => {
+                const step = routineSteps.find(s => s.id === stepId);
+                return step && !step.buffer;
+            }).length;
+            
+            const summaryRef = database.ref(`routineData/${today}/summary`);
+            summaryRef.update({
+                completedSteps: completedNonBufferSteps,
+                totalSteps: totalSteps,
+                completionPercentage: (completedNonBufferSteps / totalSteps) * 100,
+                interruptionCount: interruptionCount,
+                recoveryCount: recoveryCount,
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        // Add interruption to log UI
+        function addInterruptionToLog(type, stepName) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let typeText = '';
+            switch(type) {
+                case 'urgent': typeText = 'Urgent Issue'; break;
+                case 'delivery': typeText = 'Package/Delivery'; break;
+                case 'call': typeText = 'Phone Call/Meeting'; break;
+                case 'chore': typeText = 'Unexpected Chore'; break;
+                case 'other': typeText = 'Other Interruption'; break;
+            }
+            
+            const logEntry = $(`
+                <div class="alert alert-warning mb-2">
+                    <div class="d-flex justify-content-between align-items-top">
+                        <div>
+                            <strong>${typeText}</strong> during "${stepName}"
+                            <div class="text-muted small">Started at ${timeString}</div>
+                        </div>
+                        <span class="badge bg-danger">Active</span>
+                    </div>
+                </div>
+            `);
+            
+            if ($('#interruption-log p.text-center').length > 0) {
+                $('#interruption-log').empty();
+            }
+            
+            $('#interruption-log').prepend(logEntry);
+        }
+
+        // Update interruption log to show completed
+        function updateInterruptionLogComplete() {
+            // Find the first active interruption and mark as complete
+            $('#interruption-log .badge.bg-danger').first().removeClass('bg-danger').addClass('bg-success').text('Resolved');
+        }
+
+        // Load today's progress from Firebase
+        function loadTodayProgress() {
+            const todayRef = database.ref(`routineData/${today}`);
+            todayRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Reset arrays
+                    completedSteps = [];
+                    
+                    // Process each step
+                    if (data.steps) {
+                        Object.keys(data.steps).forEach(stepId => {
+                            const step = data.steps[stepId];
+                            if (step.completed) {
+                                completedSteps.push(stepId);
+                                completionTimes[stepId] = step.completionTime;
+                                
+                                // Update UI
+                                $(`#${stepId}`).addClass('completed');
+                                $(`button.start-btn[data-step="${stepId}"]`).prop('disabled', true);
+                                $(`button.complete-btn[data-step="${stepId}"]`).prop('disabled', true);
+                                $(`button.interrupt-btn[data-step="${stepId}"]`).prop('disabled', true);
+                                
+                                // Update timer display
+                                const minutes = Math.floor(step.completionTime);
+                                const seconds = Math.round((step.completionTime - minutes) * 60);
+                                $(`#timer-${stepId}`).text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                            }
+                        });
+                    }
+                    
+                    // Load interruptions
+                    if (data.interruptions) {
+                        interruptionCount = Object.keys(data.interruptions).length;
+                        
+                        // Clear interruption log
+                        $('#interruption-log').empty();
+                        
+                        // Add each interruption to the log
+                        Object.keys(data.interruptions).forEach(key => {
+                            const interruption = data.interruptions[key];
+                            
+                            const date = new Date(interruption.startTime);
+                            const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            
+                            let typeText = '';
+                            switch(interruption.type) {
+                                case 'urgent': typeText = 'Urgent Issue'; break;
+                                case 'delivery': typeText = 'Package/Delivery'; break;
+                                case 'call': typeText = 'Phone Call/Meeting'; break;
+                                case 'chore': typeText = 'Unexpected Chore'; break;
+                                case 'other': typeText = 'Other Interruption'; break;
+                            }
+                            
+                            const status = interruption.endTime ? 'Resolved' : 'Active';
+                            const statusClass = interruption.endTime ? 'bg-success' : 'bg-danger';
+                            
+                            const logEntry = $(`
+                                <div class="alert alert-warning mb-2">
+                                    <div class="d-flex justify-content-between align-items-top">
+                                        <div>
+                                            <strong>${typeText}</strong> during "${interruption.interruptedStepName}"
+                                            <div class="text-muted small">Started at ${timeString}</div>
+                                        </div>
+                                        <span class="badge ${statusClass}">${status}</span>
+                                    </div>
+                                </div>
+                            `);
+                            
+                            $('#interruption-log').prepend(logEntry);
+                        });
+                    }
+                    
+                    // Load recoveries
+                    if (data.recoveries) {
+                        recoveryCount = Object.keys(data.recoveries).length;
+                    }
+                    
+                    // Update progress bar and stats
+                    updateProgressBar();
+                    updateStats();
+                }
+            });
+        }
+
+        // Load historical data for graph
+        function loadHistoricalData() {
+            const days = parseInt($('#graph-range').val());
+            const dates = [];
+            const now = new Date();
+            
+            // Generate array of dates
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            const promises = dates.map(date => {
+                return database.ref(`routineData/${date}/summary`).once('value');
+            });
+            
+            Promise.all(promises).then(snapshots => {
+                const labels = [];
+                const completionData = [];
+                const interruptionData = [];
+                
+                snapshots.forEach((snapshot, index) => {
+                    const dateObj = new Date(dates[index]);
+                    const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                    labels.push(formattedDate);
+                    
+                    const value = snapshot.val();
+                    completionData.push(value ? value.completionPercentage || 0 : 0);
+                    interruptionData.push(value ? value.interruptionCount || 0 : 0);
+                });
+                
+                updateCompletionGraph(labels, completionData);
+                updateInterruptionGraph(labels, interruptionData);
+                updateInterruptionPatternsGraphs();
+            });
+        }
+
+        // Update the completion graph
+        function updateCompletionGraph(labels, data) {
+            const ctx = document.getElementById('completion-graph').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.completionChart) {
+                window.completionChart.destroy();
+            }
+            
+            window.completionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Routine Completion (%)',
+                        data: data,
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Completion Percentage'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Completion: ${Math.round(context.raw)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update the interruption graph
+        function updateInterruptionGraph(labels, data) {
+            const ctx = document.getElementById('interruption-graph').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.interruptionChart) {
+                window.interruptionChart.destroy();
+            }
+            
+            window.interruptionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Number of Interruptions',
+                        data: data,
+                        backgroundColor: 'rgba(220, 53, 69, 0.6)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            title: {
+                                display: true,
+                                text: 'Interruption Count'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update interruption patterns graphs
+        function updateInterruptionPatternsGraphs() {
+            // Get all interruptions from the past 30 days for analysis
+            const dates = [];
+            const now = new Date();
+            
+            // Generate array of dates
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            const promises = dates.map(date => {
+                return database.ref(`routineData/${date}/interruptions`).once('value');
+            });
+            
+            Promise.all(promises).then(snapshots => {
+                // Prepare data structures for analysis
+                const timeDistribution = [0, 0, 0, 0, 0, 0, 0]; // 5-minute intervals in a 35-min routine
+                const stepInterruptions = {};
+                
+                // Initialize step interruptions count
+                routineSteps.forEach(step => {
+                    if (!step.buffer) {
+                        stepInterruptions[step.id] = 0;
+                    }
+                });
+                
+                // Process all interruptions
+                snapshots.forEach(snapshot => {
+                    const interruptions = snapshot.val();
+                    if (interruptions) {
+                        Object.values(interruptions).forEach(interruption => {
+                            // Time distribution (which part of the routine gets interrupted)
+                            const startDate = new Date(interruption.startTime);
+                            const hour = startDate.getHours();
+                            // Add to the appropriate time bucket (e.g., 6:00-6:05, 6:05-6:10, etc.)
+                            const bucketIndex = Math.min(6, Math.floor((hour * 60 + startDate.getMinutes() - 360) / 5)); // Assuming routine starts at 6 AM
+                            if (bucketIndex >= 0) {
+                                timeDistribution[bucketIndex]++;
+                            }
+                            
+                            // Step interruptions
+                            if (interruption.interruptedStep && stepInterruptions.hasOwnProperty(interruption.interruptedStep)) {
+                                stepInterruptions[interruption.interruptedStep]++;
+                            }
+                        });
+                    }
+                });
+                
+                // Update the time distribution chart
+                updateInterruptionTimesChart(timeDistribution);
+                
+                // Update the steps interruption chart
+                updateInterruptedStepsChart(stepInterruptions);
+            });
+        }
+
+        // Update interruption times chart
+        function updateInterruptionTimesChart(timeData) {
+            const ctx = document.getElementById('interruption-times-chart').getContext('2d');
+            
+            // Create time labels (assuming routine starts at 6 AM)
+            const timeLabels = [];
+            for (let i = 0; i < 7; i++) {
+                const startMinute = i * 5;
+                const endMinute = (i + 1) * 5;
+                timeLabels.push(`+${startMinute}min to +${endMinute}min`);
+            }
+            
+            // Destroy existing chart if it exists
+            if (window.interruptionTimesChart) {
+                window.interruptionTimesChart.destroy();
+            }
+            
+            window.interruptionTimesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Interruption Frequency',
+                        data: timeData,
+                        backgroundColor: 'rgba(255, 193, 7, 0.6)',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update interrupted steps chart
+        function updateInterruptedStepsChart(stepData) {
+            const ctx = document.getElementById('interrupted-steps-chart').getContext('2d');
+            
+            // Extract labels and data
+            const stepLabels = [];
+            const stepCounts = [];
+            
+            routineSteps.forEach(step => {
+                if (!step.buffer && stepData.hasOwnProperty(step.id)) {
+                    stepLabels.push(step.name);
+                    stepCounts.push(stepData[step.id]);
+                }
+            });
+            
+            // Destroy existing chart if it exists
+            if (window.interruptedStepsChart) {
+                window.interruptedStepsChart.destroy();
+            }
+            
+            window.interruptedStepsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: stepLabels,
+                    datasets: [{
+                        data: stepCounts,
+                        backgroundColor: [
+                            'rgba(220, 53, 69, 0.6)',
+                            'rgba(255, 193, 7, 0.6)',
+                            'rgba(40, 167, 69, 0.6)',
+                            'rgba(0, 123, 255, 0.6)',
+                            'rgba(111, 66, 193, 0.6)',
+                            'rgba(23, 162, 184, 0.6)',
+                            'rgba(108, 117, 125, 0.6)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                }
+            });
+        }
+
+        // Recovery protocols
+        const recoveryProtocols = {
+            quick: {
+                name: '30-Second Reset',
+                steps: [
+                    { step: 'Take a deep breath', duration: 10 },
+                    { step: 'Look at your tracker', duration: 10 },
+                    { step: 'State what comes next', duration: 10 }
+                ]
+            },
+            standard: {
+                name: '2-Minute Reset',
+                steps: [
+                    { step: 'Splash cold water on face', duration: 30 },
+                    { step: 'Quick body shake', duration: 30 },
+                    { step: 'Return to routine spot', duration: 60 }
+                ]
+            },
+            full: {
+                name: '5-Minute Restart',
+                steps: [
+                    { step: 'Brief meditation', duration: 120 },
+                    { step: 'Review entire remaining routine', duration: 60 },
+                    { step: 'Begin where you left off', duration: 120 }
+                ]
+            }
+        };
+
+        // Functions for handling interruption zones
+        function isInBufferZone() {
+            if (!activeStep) return false;
+            const step = routineSteps.find(s => s.id === activeStep);
+            return step && step.buffer;
+        }
+
+        function handleInterruption(type, reason) {
+            // If in buffer zone, handle differently
+            if (isInBufferZone()) {
+                handleBufferZoneInterruption(type, reason);
+            } else {
+                // Regular interruption handling
+                const interruptedStep = activeStep;
+                pauseRoutine();
+                bookmarkCurrentPosition();
+                logInterruption(type, reason);
+            }
+        }
+
+        function handleBufferZoneInterruption(type, reason) {
+            // Buffer zone interruptions don't pause the routine
+            // They just get logged for analytics
+            logInterruption(type, reason, true);
+        }
+
+        function bookmarkCurrentPosition() {
+            if (!activeStep) return;
+            
+            // Store bookmark data
+            const bookmark = {
+                step: activeStep,
+                timestamp: Date.now(),
+                progress: getCurrentProgress()
+            };
+            
+            // Visual bookmark indicator
+            $(`#${activeStep}`).addClass('bookmarked');
+            showBookmarkToast(bookmark);
+            
+            return bookmark;
+        }
+
+        function showBookmarkToast(bookmark) {
+            const step = routineSteps.find(s => s.id === bookmark.step);
+            const toast = `
+                <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <strong class="me-auto">Position Bookmarked</strong>
+                        <small>just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        Paused at: ${step.name}
+                        <br>
+                        Progress: ${Math.round(getCurrentProgress())}%
+                    </div>
+                </div>
+            `;
+            $('#toastContainer').append(toast);
+            $('.toast').toast('show');
+        }
+
+        function startRecoveryProcess(type = 'quick') {
+            const protocol = recoveryProtocols[type];
+            let currentStep = 0;
+            
+            function showRecoveryStep() {
+                if (currentStep >= protocol.steps.length) {
+                    completeRecovery();
+                    return;
+                }
+                
+                const step = protocol.steps[currentStep];
+                updateRecoveryUI(step, currentStep, protocol.steps.length);
+                
+                setTimeout(() => {
+                    currentStep++;
+                    showRecoveryStep();
+                }, step.duration * 1000);
+            }
+            
+            showRecoveryStep();
+        }
+
+        function updateRecoveryUI(step, current, total) {
+            const progress = ((current + 1) / total) * 100;
+            $('#recoveryStep').text(step.step);
+            $('#recoveryProgress').css('width', `${progress}%`);
+        }
+
+        // Save current routine state
+        function saveRoutineState() {
+            const state = {
+                activeStep,
+                startTimes,
+                completionTimes,
+                completedSteps,
+                interruptionActive,
+                interruptionStartTime,
+                bookmarkedStep,
+                lastSaved: Date.now()
+            };
+            
+            localStorage.setItem('routineState', JSON.stringify(state));
+        }
+
+        // Load saved routine state
+        function loadSavedState() {
+            const savedState = localStorage.getItem('routineState');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                
+                // Only restore if saved within the last 12 hours
+                if (Date.now() - state.lastSaved < 12 * 60 * 60 * 1000) {
+                    activeStep = state.activeStep;
+                    startTimes = state.startTimes;
+                    completionTimes = state.completionTimes;
+                    completedSteps = state.completedSteps;
+                    interruptionActive = state.interruptionActive;
+                    interruptionStartTime = state.interruptionStartTime;
+                    bookmarkedStep = state.bookmarkedStep;
+                    
+                    // Restore UI state
+                    updateUIFromSavedState();
+                }
+            }
+        }
+
+        // Initialize accessibility features
+        function initializeA11y() {
+            // Add ARIA labels and roles
+            $('.step-card').attr('role', 'region');
+            $('.buffer-zone').attr('role', 'complementary');
+            $('.timer').attr('role', 'timer');
+            
+            // Add descriptive labels
+            $('.start-btn').attr('aria-label', function() {
+                const stepName = $(this).closest('.step-card').find('.card-title').text();
+                return `Start ${stepName}`;
+            });
+            
+            // Add live regions for updates
+            $('#routineStatus').attr({
+                'role': 'status',
+                'aria-live': 'polite'
+            });
+            
+            // Add keyboard focus indicators
+            $('button, select, input').focus(function() {
+                $(this).addClass('keyboard-focus');
+            }).blur(function() {
+                $(this).removeClass('keyboard-focus');
+            });
+        }
+
+        // Initialize sound notifications
+        function initializeSoundNotifications() {
+            // Create audio elements
+            const bufferStartSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            const bufferEndSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            const interruptionSound = new Audio('https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg');
+            
+            // Store in global object
+            window.soundEffects = {
+                bufferStart: bufferStartSound,
+                bufferEnd: bufferEndSound,
+                interruption: interruptionSound
+            };
+        }
+
+        // Play sound notification
+        function playSound(soundName) {
+            if (window.soundEffects && window.soundEffects[soundName]) {
+                window.soundEffects[soundName].play().catch(e => {
+                    console.log('Sound playback failed:', e);
+                });
+            }
+        }
+
+        $(document).ready(function() {
+            initializeUI();
+        });
+
+        // Add CSS for keyboard focus
+        const style = document.createElement('style');
+        style.textContent = `
+            .keyboard-focus {
+                outline: 3px solid #007bff !important;
+                outline-offset: 2px !important;
+            }
+            
+            [role="timer"] {
+                font-feature-settings: "tnum";
+                font-variant-numeric: tabular-nums;
+            }
+            
+            @media (prefers-reduced-motion: reduce) {
+                .step-card, .recovery-option {
+                    transform: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
