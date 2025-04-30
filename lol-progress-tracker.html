@@ -173,6 +173,7 @@
       loadGameHistory();
       loadMentalHistory();
       loadChampionProgressHistory();
+      loadOtherGameHistory(); // Added other games history loading
     });
 
     // Function to load game history from Firebase
@@ -465,6 +466,78 @@
         otherChampionInput.value = ""; // Clear the input when hidden
       }
     }
+
+    // Function to add other game session
+    function addOtherGameSession() {
+      const otherGameData = {
+        date: document.getElementById("other-game-datetime").value,
+        gameName: document.getElementById("other-game-name").value,
+        timeSpent: document.getElementById("other-game-time").value,
+        skillLevel: document.getElementById("other-game-skill").value,
+        preMood: document.getElementById("other-game-pre-mood").value,
+        postMood: document.getElementById("other-game-post-mood").value,
+        tilt: document.getElementById("other-game-tilt").value,
+        comments: document.getElementById("other-game-comments").value
+      };
+
+      firebase.database().ref('otherGames').push(otherGameData)
+        .then(() => {
+          alert("Other game session added successfully!");
+          loadOtherGameHistory(); // Reload the other game history table
+          // Clear the form
+          document.getElementById("other-games-form").reset();
+        })
+        .catch(error => console.error("Error adding other game session:", error));
+    }
+
+    // Function to load other game history from Firebase
+    function loadOtherGameHistory() {
+      firebase.database().ref('otherGames').orderByChild('date').limitToLast(50).once('value')
+        .then((snapshot) => {
+          const games = [];
+          snapshot.forEach((childSnapshot) => {
+            games.unshift({...childSnapshot.val()});
+          });
+          
+          const otherGameHistoryTable = $('#other-games-history');
+          const tbody = otherGameHistoryTable.find('tbody');
+          tbody.empty();
+          
+          // Add header row back
+          tbody.append(`
+            <tr>
+              <th>Date & Time</th>
+              <th>Game</th>
+              <th>Time Spent</th>
+              <th>Pre-Mood</th>
+              <th>Post-Mood</th>
+              <th>Tilt</th>
+              <th>Skill Level</th>
+              <th>Comments</th>
+            </tr>
+          `);
+          
+          if (games.length === 0) {
+            tbody.append('<tr><td colspan="8">No sessions recorded yet</td></tr>');
+          } else {
+            games.forEach(game => {
+              tbody.append(`
+                <tr>
+                  <td>${game.date}</td>
+                  <td>${game.gameName}</td>
+                  <td>${game.timeSpent}</td>
+                  <td>${game.preMood}</td>
+                  <td>${game.postMood}</td>
+                  <td>${game.tilt}</td>
+                  <td>${game.skillLevel}</td>
+                  <td>${game.comments}</td>
+                </tr>
+              `);
+            });
+          }
+        })
+        .catch(error => console.error("Error loading other game history:", error));
+    }
   </script>
 </head>
 <body>
@@ -476,6 +549,7 @@
       <button class="tablinks" onclick="openTab(event, 'GameLog')">Game Log</button>
       <button class="tablinks" onclick="openTab(event, 'ChampionProgress')">Champion Progress</button>
       <button class="tablinks" onclick="openTab(event, 'MentalTracker')">Mental Tracker</button>
+      <button class="tablinks" onclick="openTab(event, 'OtherGames')">Other Games</button>
     </div>
 
     <div id="Dashboard" class="tabcontent visible">
@@ -854,6 +928,64 @@
       
       <h3>Mental Game Trends</h3>
       <canvas id="mentalChart" width="400" height="200"></canvas>
+    </div>
+
+    <div id="OtherGames" class="tabcontent">
+      <h2>Other Games Progress Tracker</h2>
+      
+      <h3>Add New Gaming Session</h3>
+      <form id="other-games-form">
+        <table>
+          <tr>
+            <td>Date:</td>
+            <td><input type="datetime-local" id="other-game-datetime"></td>
+            <td>Game Name:</td>
+            <td><input type="text" id="other-game-name"></td>
+          </tr>
+          <tr>
+            <td>Time Spent (minutes):</td>
+            <td><input type="number" id="other-game-time" min="0"></td>
+            <td>Skill Level (0-10):</td>
+            <td><input type="number" id="other-game-skill" min="0" max="10"></td>
+          </tr>
+          <tr>
+            <td>Pre-Session Mood (1-10):</td>
+            <td><input type="number" id="other-game-pre-mood" min="1" max="10"></td>
+            <td>Post-Session Mood (1-10):</td>
+            <td><input type="number" id="other-game-post-mood" min="1" max="10"></td>
+          </tr>
+          <tr>
+            <td>Tilt Level (1-10):</td>
+            <td><input type="number" id="other-game-tilt" min="1" max="10"></td>
+          </tr>
+          <tr>
+            <td>Comments:</td>
+            <td colspan="3"><textarea id="other-game-comments" class="notes"></textarea></td>
+          </tr>
+          <tr>
+            <td colspan="4"><button type="button" onclick="addOtherGameSession()">Add Session</button></td>
+          </tr>
+        </table>
+      </form>
+      
+      <h3>Gaming History</h3>
+      <table id="other-games-history">
+        <tbody>
+          <tr>
+            <th>Date & Time</th>
+            <th>Game</th>
+            <th>Time Spent</th>
+            <th>Pre-Mood</th>
+            <th>Post-Mood</th>
+            <th>Tilt</th>
+            <th>Skill Level</th>
+            <th>Comments</th>
+          </tr>
+          <tr>
+            <td colspan="8">No sessions recorded yet</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
