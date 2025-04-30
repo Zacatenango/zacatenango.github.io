@@ -50,6 +50,17 @@
             color: #dc3545;
             font-weight: bold;
         }
+        .timer-paused {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        #resumeRoutine {
+            display: none;
+        }
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
         .summary-box {
             background-color: #f0f7ff;
             border-radius: 5px;
@@ -93,6 +104,8 @@
                 <div class="btn-group">
                     <button id="startRoutine" class="btn btn-primary">Start Routine</button>
                     <button id="completeRoutine" class="btn btn-success" disabled>Complete Routine</button>
+                    <button id="pauseRoutine" class="btn btn-warning" disabled>Pause Routine</button>
+                    <button id="resumeRoutine" class="btn btn-info" disabled>Resume Routine</button>
                 </div>
             </div>
         </div>
@@ -147,88 +160,18 @@
         let timerInterval = null;
         let complianceData = [];
         let complianceChart = null;
-        
-        // Initialize date
-        const today = new Date();
-        const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        $('#currentDate').text(dateString);
-
-        // Load tasks from Firebase
-        function loadTasks() {
-            matutinaRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                tasks = Object.keys(data).map(key => ({
-                    id: key,
-                    name: data[key].name,
-                    completed: data[key].completed || false
-                }));
-                renderTasks();
-            });
-        }
-
-        // Render tasks in the UI
-        function renderTasks() {
-            const taskListElement = $('#taskList');
-            taskListElement.empty();
-            
-            tasks.forEach(task => {
-                const taskElement = $(`
-                    <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
-                        <div class="form-check">
-                            <input class="form-check-input task-checkbox" type="checkbox" 
-                                   id="task-${task.id}" ${task.completed ? 'checked' : ''}>
-                            <label class="form-check-label" for="task-${task.id}">
-                                ${task.name}
-                            </label>
-                            <button class="btn btn-sm btn-outline-danger float-end delete-task">
-                                <i class="bi bi-trash"></i> Remove
-                            </button>
-                        </div>
-                    </div>
-                `);
-                taskListElement.append(taskElement);
-            });
-            
-            // Add event listeners
-            $('.task-checkbox').on('change', function() {
-                const taskId = $(this).closest('.task-item').data('id');
-                const isCompleted = $(this).is(':checked');
-                updateTaskStatus(taskId, isCompleted);
-            });
-            
-            $('.delete-task').on('click', function() {
-                const taskId = $(this).closest('.task-item').data('id');
-                deleteTask(taskId);
-            });
-        }
-
-        // Add a new task
-        function addTask(taskName) {
-            const newTaskRef = matutinaRef.push();
-            newTaskRef.set({
-                name: taskName,
-                completed: false,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
-        }
-
-        // Update task status
-        function updateTaskStatus(taskId, isCompleted) {
-            matutinaRef.child(taskId).update({
-                completed: isCompleted
-            });
-        }
-
-        // Delete a task
-        function deleteTask(taskId) {
-            matutinaRef.child(taskId).remove();
-        }
+        let isPaused = false;
+        let totalPausedTime = 0;
+        let lastPauseTime = null;
 
         // Start routine timer
         function startRoutine() {
             routineStartTime = new Date();
-            $('#startRoutine').prop('disabled', true);
-            $('#completeRoutine').prop('disabled', false);
+            isPaused = false;
+            totalPausedTime = 0;
+            lastPauseTime = null;
+            
+            updateButtonStates();
             $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
                 .html('Routine in progress... <span class="timer-running">Timer running</span>');
 
@@ -240,15 +183,99 @@
             // Save timer state to Firebase
             timerStateRef.set({
                 running: true,
-                startTime: routineStartTime.toISOString()
+                paused: false,
+                startTime: routineStartTime.toISOString(),
+                totalPausedTime: 0
             });
 
-            // Start timer
+            startTimerIntervals();
+        }
+
+        function startTimerIntervals() {
+            // Start display timer (updates every second)
             updateTimer();
-            timerInterval = setInterval(() => {
-                updateTimer();
-                syncTimerState();
-            }, 60000); // Sync every minute
+            const displayInterval = setInterval(updateTimer, 1000);
+
+            // Start Firebase sync timer (syncs every minute)
+            const syncInterval = setInterval(syncTimerState, 60000);
+            
+            // Store both intervals
+            timerInterval = { display: displayInterval, sync: syncInterval };
+        }
+
+        function updateButtonStates() {
+            $('#startRoutine').prop('disabled', routineStartTime !== null);
+            $('#completeRoutine').prop('disabled', !routineStartTime || isPaused);
+            $('#pauseRoutine').prop('disabled', !routineStartTime || !isPaused);
+            $('#resumeRoutine').prop('disabled', !routineStartTime || !isPaused);
+            
+            // Show/hide buttons based on state
+            if (routineStartTime) {
+                if (isPaused) {
+                    $('#pauseRoutine').hide();
+                    $('#resumeRoutine').show();
+                } else {
+                    $('#pauseRoutine').show();
+                    $('#resumeRoutine').hide();
+                }
+            }
+        }
+
+        function pauseTimer() {
+            if (!routineStartTime || isPaused) return;
+            
+            isPaused = true;
+            lastPauseTime = new Date();
+            
+            // Clear intervals
+            if (timerInterval) {
+                clearInterval(timerInterval.display);
+                clearInterval(timerInterval.sync);
+            }
+            
+            updateButtonStates();
+            $('#routineStatus').html('Routine paused... <span class="timer-paused">Timer paused</span>');
+            
+            // Update Firebase state
+            timerStateRef.update({
+                paused: true,
+                lastPauseTime: lastPauseTime.toISOString()
+            });
+        }
+
+        function resumeTimer() {
+            if (!routineStartTime || !isPaused) return;
+            
+            // Calculate paused duration
+            const now = new Date();
+            const pauseDuration = now - lastPauseTime;
+            totalPausedTime += pauseDuration;
+            
+            isPaused = false;
+            lastPauseTime = null;
+            
+            updateButtonStates();
+            $('#routineStatus').html('Routine in progress... <span class="timer-running">Timer running</span>');
+            
+            // Update Firebase state
+            timerStateRef.update({
+                paused: false,
+                totalPausedTime: totalPausedTime
+            });
+            
+            startTimerIntervals();
+        }
+
+        // Update timer display
+        function updateTimer() {
+            if (!routineStartTime || isPaused) return;
+
+            const now = new Date();
+            const elapsedMs = (now - routineStartTime) - totalPausedTime;
+            const minutes = Math.floor(elapsedMs / 60000);
+            const seconds = Math.floor((elapsedMs % 60000) / 1000);
+
+            $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         }
 
         // Sync timer state to Firebase
@@ -256,13 +283,15 @@
             if (!routineStartTime) return;
 
             const now = new Date();
-            const elapsedMs = now - routineStartTime;
+            const elapsedMs = (now - routineStartTime) - totalPausedTime;
             const minutes = Math.floor(elapsedMs / 60000);
             const seconds = Math.floor((elapsedMs % 60000) / 1000);
 
             timerStateRef.update({
                 elapsedMinutes: minutes,
-                elapsedSeconds: seconds
+                elapsedSeconds: seconds,
+                totalPausedTime: totalPausedTime,
+                paused: isPaused
             });
         }
 
@@ -272,32 +301,39 @@
                 const state = snapshot.val();
                 if (state && state.running) {
                     routineStartTime = new Date(state.startTime);
-                    const now = new Date();
-                    const elapsedMs = now - routineStartTime;
-                    const minutes = Math.floor(elapsedMs / 60000);
-                    const seconds = Math.floor((elapsedMs % 60000) / 1000);
-
-                    $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-                    $('#startRoutine').prop('disabled', true);
-                    $('#completeRoutine').prop('disabled', false);
-                    $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
-                        .html('Routine in progress... <span class="timer-running">Timer running</span>');
-
-                    timerInterval = setInterval(() => {
-                        updateTimer();
-                        syncTimerState();
-                    }, 60000); // Sync every minute
+                    isPaused = state.paused || false;
+                    totalPausedTime = state.totalPausedTime || 0;
+                    
+                    if (isPaused && state.lastPauseTime) {
+                        lastPauseTime = new Date(state.lastPauseTime);
+                    }
+                    
+                    updateButtonStates();
+                    
+                    if (isPaused) {
+                        $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
+                            .html('Routine paused... <span class="timer-paused">Timer paused</span>');
+                    } else {
+                        $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
+                            .html('Routine in progress... <span class="timer-running">Timer running</span>');
+                        startTimerIntervals();
+                    }
                 }
             });
         }
 
         // Complete routine
         function completeRoutine() {
-            if (!routineStartTime) return;
+            if (!routineStartTime || isPaused) return;
 
-            clearInterval(timerInterval);
+            // Clear intervals
+            if (timerInterval) {
+                clearInterval(timerInterval.display);
+                clearInterval(timerInterval.sync);
+            }
+
             const endTime = new Date();
-            const durationMinutes = Math.round((endTime - routineStartTime) / 60000);
+            const durationMinutes = Math.round(((endTime - routineStartTime) - totalPausedTime) / 60000);
 
             // Count completed tasks
             const completedCount = tasks.filter(task => task.completed).length;
@@ -310,36 +346,29 @@
                 durationMinutes: durationMinutes,
                 tasksCompleted: completedCount,
                 totalTasks: tasks.length,
-                completionRate: completionPercent
+                completionRate: completionPercent,
+                totalPausedTimeMinutes: Math.round(totalPausedTime / 60000)
             };
 
             historialRutinaRef.push(routineRecord);
 
             // Reset timer state in Firebase
             timerStateRef.set({
-                running: false
+                running: false,
+                paused: false
             });
 
-            // Reset UI
-            $('#startRoutine').prop('disabled', false);
-            $('#completeRoutine').prop('disabled', true);
+            // Reset UI and variables
+            routineStartTime = null;
+            isPaused = false;
+            totalPausedTime = 0;
+            lastPauseTime = null;
+            
+            updateButtonStates();
             $('#routineStatus').removeClass('alert-warning').addClass('alert-success')
                 .html(`Routine completed! <strong>${durationMinutes} minutes</strong> with ${completionPercent}% tasks completed`);
 
-            routineStartTime = null;
             loadComplianceData();
-        }
-
-        // Update timer display
-        function updateTimer() {
-            if (!routineStartTime) return;
-
-            const now = new Date();
-            const elapsedMs = now - routineStartTime;
-            const minutes = Math.floor(elapsedMs / 60000);
-            const seconds = Math.floor((elapsedMs % 60000) / 1000);
-
-            $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         }
 
         // Load compliance data for the chart
@@ -500,6 +529,12 @@
 
             // Start routine button
             $('#startRoutine').on('click', startRoutine);
+
+            // Pause routine button
+            $('#pauseRoutine').on('click', pauseTimer);
+
+            // Resume routine button
+            $('#resumeRoutine').on('click', resumeTimer);
 
             // Complete routine button
             $('#completeRoutine').on('click', completeRoutine);
