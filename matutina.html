@@ -615,40 +615,69 @@
                 startTime: routineStartTime.toISOString(),
                 lastPauseTime: lastPauseTime ? lastPauseTime.toISOString() : null,
                 currentInProgressTaskId: currentInProgressTaskId,
+                firstTaskCompleted: firstTaskCompleted,
+                timeToFirstTask: timeToFirstTask,
                 lastUpdated: firebase.database.ServerValue.TIMESTAMP
             });
         }
 
         // Load timer state from Firebase
         function loadTimerState() {
+            return new Promise((resolve, reject) => {
+                timerStateRef.get().then((snapshot) => {
+                    const state = snapshot.val();
+                    if (state && state.running) {
+                        routineStartTime = new Date(state.startTime);
+                        isPaused = state.paused || false;
+                        totalPausedTime = state.totalPausedTime || 0;
+                        currentInProgressTaskId = state.currentInProgressTaskId || null;
+                        firstTaskCompleted = state.firstTaskCompleted || false;
+                        timeToFirstTask = state.timeToFirstTask || null;
+                        
+                        if (isPaused && state.lastPauseTime) {
+                            lastPauseTime = new Date(state.lastPauseTime);
+                        }
+                        
+                        // Clear any existing intervals
+                        if (timerInterval) {
+                            clearInterval(timerInterval.display);
+                            clearInterval(timerInterval.sync);
+                        }
+
+                        // Update UI immediately
+                        updateTimer();
+                        updateButtonStates();
+                        updateUIState();
+                        
+                        // Start new intervals if not paused
+                        if (!isPaused) {
+                            startTimerIntervals();
+                        }
+                    }
+                    resolve();
+                }).catch(reject);
+            });
+        }
+
+        // Initialize Firebase listeners
+        function initializeFirebaseListeners() {
+            // Listen for timer state changes
             timerStateRef.on('value', (snapshot) => {
                 const state = snapshot.val();
                 if (state && state.running) {
-                    routineStartTime = new Date(state.startTime);
+                    if (!routineStartTime || new Date(state.startTime).getTime() !== routineStartTime.getTime()) {
+                        routineStartTime = new Date(state.startTime);
+                    }
                     isPaused = state.paused || false;
                     totalPausedTime = state.totalPausedTime || 0;
-                    currentInProgressTaskId = state.currentInProgressTaskId || null;
                     
-                    if (isPaused && state.lastPauseTime) {
+                    if (state.lastPauseTime) {
                         lastPauseTime = new Date(state.lastPauseTime);
                     }
                     
-                    // Clear existing intervals if any
-                    if (timerInterval) {
-                        clearInterval(timerInterval.display);
-                        clearInterval(timerInterval.sync);
-                    }
-
-                    // Update UI immediately
-                    updateTimer();
                     updateButtonStates();
                     updateUIState();
-                    
-                    // Start new intervals if not paused
-                    if (!isPaused) {
-                        startTimerIntervals();
-                    }
-                } else {
+                } else if (!state || !state.running) {
                     // Reset state if routine is not running
                     routineStartTime = null;
                     isPaused = false;
@@ -885,8 +914,14 @@
         }
 
         // Event listeners and initialization
-        $(document).ready(function() {
-            // Load initial data
+        $(document).ready(async function() {
+            // Initialize Firebase listeners first
+            initializeFirebaseListeners();
+            
+            // Load initial timer state
+            await loadTimerState();
+            
+            // Load other data
             matutinaRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
                 tasks = Object.keys(data).map(key => ({
@@ -903,7 +938,6 @@
             });
 
             loadComplianceData();
-            loadTimerState();
             loadInterruptions();
             initializeCharts();
             
