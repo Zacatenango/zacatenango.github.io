@@ -446,24 +446,24 @@
             totalPausedTime = 0;
             lastPauseTime = null;
             
-            updateButtonStates();
-            $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
-                .html('Routine in progress... <span class="timer-running">Timer running</span>');
-
-            // Reset all task checkboxes
-            tasks.forEach(task => {
-                updateTaskStatus(task.id, false);
-            });
-
-            // Save timer state to Firebase
+            // Save timer state to Firebase first
             timerStateRef.set({
                 running: true,
-                paused: false,
                 startTime: routineStartTime.toISOString(),
+                paused: false,
                 totalPausedTime: 0
-            });
+            }).then(() => {
+                updateButtonStates();
+                $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
+                    .html('Routine in progress... <span class="timer-running">Timer running</span>');
 
-            startTimerIntervals();
+                // Reset all task checkboxes
+                tasks.forEach(task => {
+                    updateTaskStatus(task.id, false);
+                });
+
+                startTimerIntervals();
+            });
         }
 
         function startTimerIntervals() {
@@ -600,16 +600,18 @@
             const seconds = Math.floor((elapsedMs % 60000) / 1000);
 
             timerStateRef.update({
+                running: true,
                 elapsedMinutes: minutes,
                 elapsedSeconds: seconds,
                 totalPausedTime: totalPausedTime,
-                paused: isPaused
+                paused: isPaused,
+                startTime: routineStartTime.toISOString()
             });
         }
 
         // Load timer state from Firebase
         function loadTimerState() {
-            timerStateRef.on('value', (snapshot) => {
+            timerStateRef.once('value', (snapshot) => {
                 const state = snapshot.val();
                 if (state && state.running) {
                     routineStartTime = new Date(state.startTime);
@@ -621,8 +623,51 @@
                         lastPauseTime = new Date(state.lastPauseTime);
                     }
                     
+                    $('#startRoutine').prop('disabled', true);
+                    $('#completeRoutine').prop('disabled', !isPaused);
+                    $('#pauseRoutine').prop('disabled', isPaused);
+                    $('#resumeRoutine').prop('disabled', !isPaused);
+                    
+                    // Show/hide pause/resume buttons
+                    if (isPaused) {
+                        $('#pauseRoutine').hide();
+                        $('#resumeRoutine').show();
+                        $('#routineStatus').html('Routine paused... <span class="timer-paused">Timer paused</span>');
+                        showInterruptionForm();
+                    } else {
+                        $('#pauseRoutine').show();
+                        $('#resumeRoutine').hide();
+                        $('#routineStatus').html('Routine in progress... <span class="timer-running">Timer running</span>');
+                        startTimerIntervals();
+                    }
+                    
+                    // Start timer intervals if not paused
+                    if (!isPaused) {
+                        startTimerIntervals();
+                    } else {
+                        updateTimer(); // Update timer display immediately for paused state
+                    }
+                } else {
+                    // Reset timer state if no active routine
+                    routineStartTime = null;
+                    isPaused = false;
+                    totalPausedTime = 0;
+                    lastPauseTime = null;
+                    currentInProgressTaskId = null;
                     updateButtonStates();
-                    updateUIState();
+                }
+            });
+            
+            // Set up real-time listener for state changes
+            timerStateRef.on('value', (snapshot) => {
+                const state = snapshot.val();
+                if (state && state.running) {
+                    isPaused = state.paused || false;
+                    totalPausedTime = state.totalPausedTime || 0;
+                    if (state.lastPauseTime) {
+                        lastPauseTime = new Date(state.lastPauseTime);
+                    }
+                    updateButtonStates();
                 }
             });
         }
