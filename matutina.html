@@ -349,7 +349,7 @@
 
         // Global Firebase database references
         const historialRutinaRef = database.ref('historial_rutina');
-        const matutinaRef = database.ref('matutina');
+        const matutinaRef = database.ref('matutina_tasks');  // Changed to a more specific path
         const timerStateRef = database.ref('timer_state');
         const interruptionsRef = database.ref('interruptions');
 
@@ -921,7 +921,7 @@
             // Load initial timer state
             await loadTimerState();
             
-            // Load other data
+            // Set up real-time listener for tasks
             matutinaRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
                 tasks = Object.keys(data).map(key => ({
@@ -930,10 +930,8 @@
                     completed: data[key].completed || false,
                     inProgress: data[key].inProgress || false,
                     order: data[key].order || 0
-                }));
+                })).sort((a, b) => (a.order || 0) - (b.order || 0));
                 
-                // Sort tasks by order
-                tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
                 renderTasks();
             });
 
@@ -1016,12 +1014,17 @@
             const taskListElement = $('#taskList');
             taskListElement.empty();
             
-            if (tasks.length === 0) {
+            if (!tasks || tasks.length === 0) {
                 taskListElement.append('<p class="text-muted">No tasks added yet. Add your first task below.</p>');
                 return;
             }
             
+            // Sort tasks by order before rendering
+            tasks.sort((a, b) => ((a.order || 0) - (b.order || 0)));
+            
             tasks.forEach(task => {
+                if (!task || !task.id || !task.name) return; // Skip invalid tasks
+                
                 const taskElement = $(`
                     <div class="task-item draggable-task ${task.completed ? 'task-done' : ''} ${task.inProgress ? 'task-in-progress' : ''}" data-id="${task.id}">
                         <div class="form-check d-flex justify-content-between align-items-center">
@@ -1046,19 +1049,19 @@
                 taskListElement.append(taskElement);
             });
 
-            // Add event listeners for checkboxes, in-progress buttons, and delete buttons
-            $('.task-checkbox').on('change', function() {
+            // Re-add event listeners
+            $('.task-checkbox').off('change').on('change', function() {
                 const taskId = $(this).closest('.task-item').data('id');
                 const isCompleted = $(this).is(':checked');
                 updateTaskStatus(taskId, isCompleted);
             });
             
-            $('.set-in-progress').on('click', function() {
+            $('.set-in-progress').off('click').on('click', function() {
                 const taskId = $(this).closest('.task-item').data('id');
                 toggleInProgress(taskId);
             });
             
-            $('.delete-task').on('click', function() {
+            $('.delete-task').off('click').on('click', function() {
                 const taskId = $(this).closest('.task-item').data('id');
                 deleteTask(taskId);
             });
