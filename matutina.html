@@ -9,6 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -106,6 +109,45 @@
         canvas {
             max-height: 300px !important;
         }
+        .task-in-progress {
+            border-left: 4px solid #0d6efd;
+            background-color: #e7f1ff !important;
+        }
+        .interruption-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+        .interruption-btn {
+            height: 100px;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            white-space: normal;
+        }
+        .progress-steps {
+            list-style: none;
+            padding: 0;
+        }
+        .progress-steps li {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .progress-steps li.completed {
+            background-color: #d4edda;
+        }
+        .chart-stack {
+            margin-top: 20px;
+        }
+        .draggable-task {
+            cursor: move;
+        }
+        .sortable-ghost {
+            opacity: 0.5;
+            background-color: #e9ecef;
+        }
     </style>
 </head>
 <body>
@@ -171,9 +213,96 @@
             </div>
         </div>
         
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="interruption-section">
+                    <h4>Interruption Recovery</h4>
+                    <p class="text-muted">Select the appropriate reset based on interruption severity:</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-success interruption-btn w-100" data-reset-type="minor" data-duration="30" data-steps="Take a deep breath, Look at your tracker, State what comes next">
+                                30 Second Reset
+                                <br><small>Minor Interruption</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-warning interruption-btn w-100" data-reset-type="moderate" data-duration="120" data-steps="Splash cold water on face, Quick body shake, Return to routine">
+                                2 Minute Reset
+                                <br><small>Moderate Interruption</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-danger interruption-btn w-100" data-reset-type="major" data-duration="300" data-steps="Brief meditation, Review entire remaining routine, Begin where I left off">
+                                5 Minute Reset
+                                <br><small>Major Interruption</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Confirmation Modal -->
+        <div class="modal fade" id="resetConfirmModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Reset</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="resetDetails"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="startRecoveryBtn">Start Recovery</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recovery Progress Modal -->
+        <div class="modal fade" id="recoveryProgressModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Recovery in Progress</h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="progress mb-3">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div id="recoverySteps" class="mb-3"></div>
+                        <div id="currentRecoveryStep" class="alert alert-info"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="completeRecoveryBtn" disabled>
+                            Complete and Return to Routine
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add the new chart containers -->
         <div class="chart-container">
             <h4>Compliance History</h4>
             <canvas id="complianceChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h4>Daily Interruptions</h4>
+            <canvas id="interruptionsChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h4>Steps Interruption Frequency</h4>
+            <canvas id="stepsInterruptionChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h4>Interruption Duration Distribution</h4>
+            <canvas id="durationHistogramChart"></canvas>
         </div>
         
         <div class="interruption-history">
@@ -373,6 +502,12 @@
             isPaused = true;
             lastPauseTime = new Date();
             
+            // Store which task was in progress when paused
+            const currentTask = tasks.find(t => t.inProgress);
+            if (currentTask) {
+                currentInProgressTaskId = currentTask.id;
+            }
+            
             // Clear intervals
             if (timerInterval) {
                 clearInterval(timerInterval.display);
@@ -388,7 +523,8 @@
             // Update Firebase state
             timerStateRef.update({
                 paused: true,
-                lastPauseTime: lastPauseTime.toISOString()
+                lastPauseTime: lastPauseTime.toISOString(),
+                currentInProgressTaskId: currentInProgressTaskId
             });
         }
 
@@ -398,14 +534,29 @@
             // Hide interruption form if visible
             hideInterruptionForm();
             
-            // Calculate paused duration
+            // Calculate paused duration and log the interruption
             const now = new Date();
             const pauseDuration = now - lastPauseTime;
             totalPausedTime += pauseDuration;
             
+            // Log the interruption with the current task
+            const interruption = {
+                timestamp: now.getTime(),
+                duration: pauseDuration,
+                routineId: routineStartTime.getTime(),
+                currentStep: tasks.find(t => t.id === currentInProgressTaskId)?.name
+            };
+            
+            interruptionsRef.push(interruption).then(() => {
+                // Refresh charts
+                renderInterruptionsChart();
+                renderStepsInterruptionChart();
+                renderDurationHistogramChart();
+            });
+            
             isPaused = false;
             lastPauseTime = null;
-            currentInterruptionId = null;
+            currentInProgressTaskId = null;
             
             updateButtonStates();
             $('#routineStatus').html('Routine in progress... <span class="timer-running">Timer running</span>');
@@ -413,7 +564,8 @@
             // Update Firebase state
             timerStateRef.update({
                 paused: false,
-                totalPausedTime: totalPausedTime
+                totalPausedTime: totalPausedTime,
+                currentInProgressTaskId: null
             });
             
             startTimerIntervals();
@@ -766,27 +918,39 @@
             
             tasks.forEach(task => {
                 const taskElement = $(`
-                    <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
-                        <div class="form-check">
-                            <input class="form-check-input task-checkbox" type="checkbox" 
-                                   id="task-${task.id}" ${task.completed ? 'checked' : ''}>
-                            <label class="form-check-label" for="task-${task.id}">
-                                ${task.name}
-                            </label>
-                            <button class="btn btn-sm btn-outline-danger float-end delete-task">
-                                <i class="bi bi-trash"></i> Remove
-                            </button>
+                    <div class="task-item draggable-task ${task.completed ? 'task-done' : ''} ${task.inProgress ? 'task-in-progress' : ''}" data-id="${task.id}">
+                        <div class="form-check d-flex justify-content-between align-items-center">
+                            <div>
+                                <input class="form-check-input task-checkbox" type="checkbox" 
+                                       id="task-${task.id}" ${task.completed ? 'checked' : ''}>
+                                <label class="form-check-label" for="task-${task.id}">
+                                    ${task.name}
+                                </label>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary set-in-progress" ${task.completed ? 'disabled' : ''}>
+                                    <i class="bi bi-play-fill"></i> Set In Progress
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger delete-task">
+                                    <i class="bi bi-trash"></i> Remove
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `);
                 taskListElement.append(taskElement);
             });
-            
-            // Add event listeners for checkboxes and delete buttons
+
+            // Add event listeners for checkboxes, in-progress buttons, and delete buttons
             $('.task-checkbox').on('change', function() {
                 const taskId = $(this).closest('.task-item').data('id');
                 const isCompleted = $(this).is(':checked');
                 updateTaskStatus(taskId, isCompleted);
+            });
+            
+            $('.set-in-progress').on('click', function() {
+                const taskId = $(this).closest('.task-item').data('id');
+                toggleInProgress(taskId);
             });
             
             $('.delete-task').on('click', function() {
@@ -795,16 +959,38 @@
             });
         }
 
-        // Update task status
+        function toggleInProgress(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            // If this task is being set to in-progress, clear other in-progress tasks
+            if (!task.inProgress) {
+                tasks.forEach(t => {
+                    if (t.id !== taskId && t.inProgress) {
+                        matutinaRef.child(t.id).update({ inProgress: false });
+                        t.inProgress = false;
+                    }
+                });
+            }
+
+            task.inProgress = !task.inProgress;
+            matutinaRef.child(taskId).update({ inProgress: task.inProgress });
+            renderTasks();
+        }
+
         function updateTaskStatus(taskId, isCompleted) {
             matutinaRef.child(taskId).update({
-                completed: isCompleted
+                completed: isCompleted,
+                inProgress: isCompleted ? false : tasks.find(t => t.id === taskId)?.inProgress || false
             });
             
             // Update local tasks array
             const taskIndex = tasks.findIndex(t => t.id === taskId);
             if (taskIndex !== -1) {
                 tasks[taskIndex].completed = isCompleted;
+                if (isCompleted) {
+                    tasks[taskIndex].inProgress = false;
+                }
 
                 // Track time to first task completion
                 if (isCompleted && !firstTaskCompleted && routineStartTime) {
@@ -815,7 +1001,7 @@
             }
             
             // Update UI
-            $(`#task-${taskId}`).closest('.task-item').toggleClass('task-done', isCompleted);
+            renderTasks();
         }
 
         // Delete a task
@@ -836,6 +1022,303 @@
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         }
+    </script>
+    <script>
+        // Interruption Management
+        let currentResetType = null;
+        let currentResetDuration = null;
+        let resetInterval = null;
+
+        // Initialize Sortable for task list
+        const taskList = document.getElementById('taskList');
+        new Sortable(taskList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                const taskIds = Array.from(taskList.children).map(item => item.dataset.id);
+                updateTaskOrder(taskIds);
+            }
+        });
+
+        function updateTaskOrder(taskIds) {
+            const updates = {};
+            taskIds.forEach((id, index) => {
+                updates[`${id}/order`] = index;
+            });
+            matutinaRef.update(updates);
+        }
+
+        // Initialize new charts
+        let interruptionsChart = null;
+        let stepsInterruptionChart = null;
+        let durationHistogramChart = null;
+
+        function initializeCharts() {
+            renderInterruptionsChart();
+            renderStepsInterruptionChart();
+            renderDurationHistogramChart();
+        }
+
+        function renderInterruptionsChart() {
+            const ctx = document.getElementById('interruptionsChart').getContext('2d');
+            interruptionsRef.orderByChild('timestamp').limitToLast(30).once('value', snapshot => {
+                const data = {};
+                snapshot.forEach(child => {
+                    const interruption = child.val();
+                    const date = new Date(interruption.timestamp).toLocaleDateString();
+                    if (!data[date]) {
+                        data[date] = { minor: 0, moderate: 0, major: 0, totalTime: 0 };
+                    }
+                    
+                    if (interruption.duration <= 30000) data[date].minor++;
+                    else if (interruption.duration <= 120000) data[date].moderate++;
+                    else data[date].major++;
+                    
+                    data[date].totalTime += interruption.duration / 60000; // Convert to minutes
+                });
+
+                const labels = Object.keys(data);
+                const minorData = labels.map(date => data[date].minor);
+                const moderateData = labels.map(date => data[date].moderate);
+                const majorData = labels.map(date => data[date].major);
+                const timeData = labels.map(date => Math.round(data[date].totalTime));
+
+                if (interruptionsChart) interruptionsChart.destroy();
+                interruptionsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Minor',
+                                data: minorData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                stack: 'Stack 0'
+                            },
+                            {
+                                label: 'Moderate',
+                                data: moderateData,
+                                backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                                stack: 'Stack 0'
+                            },
+                            {
+                                label: 'Major',
+                                data: majorData,
+                                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                stack: 'Stack 0'
+                            },
+                            {
+                                label: 'Total Time (minutes)',
+                                data: timeData,
+                                type: 'line',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Count'
+                                }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Minutes'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderStepsInterruptionChart() {
+            const ctx = document.getElementById('stepsInterruptionChart').getContext('2d');
+            interruptionsRef.once('value', snapshot => {
+                const stepCounts = {};
+                tasks.forEach(task => {
+                    stepCounts[task.name] = 0;
+                });
+
+                snapshot.forEach(child => {
+                    const interruption = child.val();
+                    if (interruption.currentStep) {
+                        stepCounts[interruption.currentStep] = (stepCounts[interruption.currentStep] || 0) + 1;
+                    }
+                });
+
+                if (stepsInterruptionChart) stepsInterruptionChart.destroy();
+                stepsInterruptionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(stepCounts),
+                        datasets: [{
+                            label: 'Interruptions',
+                            data: Object.values(stepCounts),
+                            backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Interruptions'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderDurationHistogramChart() {
+            const ctx = document.getElementById('durationHistogramChart').getContext('2d');
+            interruptionsRef.once('value', snapshot => {
+                const buckets = Array(12).fill(0); // 12 buckets of 5 minutes each (0-60 minutes)
+                
+                snapshot.forEach(child => {
+                    const interruption = child.val();
+                    const durationMinutes = interruption.duration / 60000;
+                    const bucketIndex = Math.min(Math.floor(durationMinutes / 5), 11);
+                    buckets[bucketIndex]++;
+                });
+
+                const labels = buckets.map((_, i) => `${i*5}-${(i+1)*5} min`);
+
+                if (durationHistogramChart) durationHistogramChart.destroy();
+                durationHistogramChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Frequency',
+                            data: buckets,
+                            backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Interruptions'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Duration'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // Interruption reset handling
+        $('.interruption-btn').on('click', function() {
+            currentResetType = $(this).data('reset-type');
+            currentResetDuration = parseInt($(this).data('duration'));
+            const steps = $(this).data('steps').split(', ');
+            
+            const resetDetails = `
+                <h4>${currentResetDuration} Second ${currentResetType.charAt(0).toUpperCase() + currentResetType.slice(1)} Reset</h4>
+                <p>Steps to follow:</p>
+                <ol>
+                    ${steps.map(step => `<li>${step}</li>`).join('')}
+                </ol>
+            `;
+            
+            $('#resetDetails').html(resetDetails);
+            $('#resetConfirmModal').modal('show');
+        });
+
+        $('#startRecoveryBtn').on('click', function() {
+            $('#resetConfirmModal').modal('hide');
+            startRecoveryTimer();
+        });
+
+        function startRecoveryTimer() {
+            const steps = $('.interruption-btn[data-reset-type="' + currentResetType + '"]').data('steps').split(', ');
+            const stepDuration = Math.floor(currentResetDuration / steps.length);
+            let currentStep = 0;
+            let timeElapsed = 0;
+
+            // Setup recovery modal
+            $('#recoverySteps').html(`
+                <ol class="progress-steps">
+                    ${steps.map(step => `<li>${step}</li>`).join('')}
+                </ol>
+            `);
+            $('#currentRecoveryStep').text(steps[0]);
+            $('.progress-bar').css('width', '0%');
+            $('#recoveryProgressModal').modal('show');
+
+            resetInterval = setInterval(() => {
+                timeElapsed++;
+                const progress = (timeElapsed / currentResetDuration) * 100;
+                $('.progress-bar').css('width', progress + '%');
+
+                const currentStepIndex = Math.min(Math.floor(timeElapsed / stepDuration), steps.length - 1);
+                if (currentStepIndex !== currentStep) {
+                    currentStep = currentStepIndex;
+                    $('#currentRecoveryStep').text(steps[currentStep]);
+                    $('.progress-steps li').removeClass('completed');
+                    for (let i = 0; i <= currentStep; i++) {
+                        $('.progress-steps li').eq(i).addClass('completed');
+                    }
+                }
+
+                if (timeElapsed >= currentResetDuration) {
+                    clearInterval(resetInterval);
+                    $('#completeRecoveryBtn').prop('disabled', false);
+                }
+            }, 1000);
+        }
+
+        $('#completeRecoveryBtn').on('click', function() {
+            clearInterval(resetInterval);
+            $('#recoveryProgressModal').modal('hide');
+            
+            // Log the interruption recovery
+            const recovery = {
+                timestamp: Date.now(),
+                type: currentResetType,
+                duration: currentResetDuration * 1000,
+                routineId: routineStartTime ? routineStartTime.getTime() : null
+            };
+            
+            interruptionsRef.push(recovery).then(() => {
+                // Refresh charts
+                renderInterruptionsChart();
+                renderStepsInterruptionChart();
+                renderDurationHistogramChart();
+            });
+        });
+
+        // Initialize charts on page load
+        $(document).ready(function() {
+            // ...existing document.ready code...
+            initializeCharts();
+        });
     </script>
 </body>
 </html>
