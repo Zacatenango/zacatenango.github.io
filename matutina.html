@@ -7,9 +7,8 @@
     <!-- Load Firebase SDK first -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <!-- Then load jQuery -->
+    <!-- Other dependencies -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <!-- Then load other dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -247,68 +246,66 @@
     </div>
 
     <script>
-        // Single initialization point for Firebase
-        let database;
-        let matutinaRef;
-        let historialRutinaRef;
-        let timerStateRef;
-        let interruptionsRef;
-        
+        // Single point of initialization
+        const config = {
+            apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
+            authDomain: "misaplicaciones-a39bb.firebaseapp.com",
+            databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
+            projectId: "misaplicaciones-a39bb",
+            storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
+            messagingSenderId: "375780546756",
+            appId: "1:375780546756:web:c87ad2c8f5c7e71869d191",
+            measurementId: "G-NSZ17K1N89"
+        };
+
         // Wait for Firebase SDK to load
-        document.addEventListener('DOMContentLoaded', function() {
+        $(document).ready(function() {
             if (typeof firebase === 'undefined') {
                 console.error('Firebase SDK not loaded');
+                $('#routineStatus').addClass('alert-danger')
+                    .html('Error: Firebase SDK not loaded. Please refresh the page.');
                 return;
             }
 
-            // Initialize Firebase
-            const firebaseConfig = {
-                apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
-                authDomain: "misaplicaciones-a39bb.firebaseapp.com",
-                databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
-                projectId: "misaplicaciones-a39bb",
-                storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
-                messagingSenderId: "375780546756",
-                appId: "1:375780546756:web:c87ad2c8f5c7e71869d191",
-                measurementId: "G-NSZ17K1N89"
-            };
-
             try {
-                firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                
+                // Initialize Firebase only once
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                const database = firebase.database();
+                console.log('Firebase initialized');
+
                 // Initialize database references with consistent paths
-                matutinaRef = database.ref('morning_routine/tasks');
-                historialRutinaRef = database.ref('morning_routine/history');
-                timerStateRef = database.ref('morning_routine/timer_state');
-                interruptionsRef = database.ref('morning_routine/interruptions');
+                const ROOT_PATH = 'morning_routine';
+                window.matutinaRef = database.ref(`${ROOT_PATH}/tasks`);
+                window.historialRutinaRef = database.ref(`${ROOT_PATH}/history`);
+                window.timerStateRef = database.ref(`${ROOT_PATH}/timer_state`);
+                window.interruptionsRef = database.ref(`${ROOT_PATH}/interruptions`);
 
-                console.log('Firebase initialized with path:', matutinaRef.toString());
-
-                // Test database connection
+                // Test database connection before proceeding
                 database.ref('.info/connected').once('value')
                     .then((snap) => {
                         if (snap.val() === true) {
                             console.log('Connected to Firebase');
                             return loadInitialTasks();
                         } else {
-                            console.log('Not connected to Firebase');
                             throw new Error('Not connected to Firebase');
                         }
                     })
                     .then(() => {
-                        console.log('Initial tasks loaded');
+                        console.log('Tasks loaded successfully');
                         initializeApp();
                     })
                     .catch((error) => {
-                        console.error('Setup error:', error);
+                        console.error('Firebase setup error:', error);
                         $('#routineStatus').addClass('alert-danger')
-                            .html('Error connecting to database. Please refresh the page.');
+                            .html('Error connecting to database. Please check your internet connection and refresh the page.');
                     });
+
             } catch (error) {
                 console.error('Firebase initialization error:', error);
                 $('#routineStatus').addClass('alert-danger')
-                    .html('Error initializing application. Please refresh the page.');
+                    .html('Error initializing Firebase. Please refresh the page.');
             }
         });
 
