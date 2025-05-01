@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Morning Routine Tracker</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.js"></script>
+    <!-- Load Firebase SDK first -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Then load jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Then load other dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- Load styles -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         body {
@@ -152,168 +156,72 @@
 </head>
 <body>
     <div class="container app-container">
-        <h1 class="text-center mb-4">Morning Routine Tracker</h1>
+        <h2 class="mb-4">Morning Routine Tracker <small class="text-muted" id="currentDate"></small></h2>
         
-        <div class="summary-box">
-            <div class="row">
-                <div class="col-md-3">
-                    <p>Current Streak: <span id="currentStreak" class="streak-count">0</span> days</p>
-                </div>
-                <div class="col-md-3">
-                    <p>Completion Rate: <span id="completionRate">0%</span></p>
-                </div>
-                <div class="col-md-3">
-                    <p>Average Duration: <span id="averageDuration">0</span> min</p>
-                </div>
-                <div class="col-md-3">
-                    <p>Time to First Task: <span id="timeToFirstTask">--:--</span></p>
-                </div>
-            </div>
+        <div class="alert alert-info" id="routineStatus">
+            Start your routine when ready
         </div>
 
         <div class="row mb-4">
             <div class="col-md-6">
-                <h3>Today's Routine <small id="currentDate" class="text-muted"></small></h3>
-                <div id="routineStatus" class="alert alert-info">
-                    Ready to start your routine
-                </div>
-                <div id="interruption-form" class="interruption-form">
-                    <h5>Log Interruption</h5>
-                    <div class="form-group">
-                        <label for="interruption-reason">What interrupted you?</label>
-                        <textarea id="interruption-reason" class="form-control" rows="2"></textarea>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Current Timer</h5>
+                        <div class="display-4 mb-3" id="currentTimer">00:00</div>
+                        <div class="btn-group">
+                            <button id="startRoutine" class="btn btn-primary">Start Routine</button>
+                            <button id="pauseRoutine" class="btn btn-warning" disabled>Pause</button>
+                            <button id="resumeRoutine" class="btn btn-success" style="display: none;">Resume</button>
+                            <button id="completeRoutine" class="btn btn-success" disabled>Complete</button>
+                        </div>
                     </div>
-                    <button id="save-interruption" class="btn btn-warning mt-2">Save Interruption</button>
                 </div>
             </div>
-            <div class="col-md-6 text-end">
-                <p>Current Timer: <span id="currentTimer">00:00</span></p>
-                <div class="btn-group">
-                    <button id="startRoutine" class="btn btn-primary">Start Routine</button>
-                    <button id="completeRoutine" class="btn btn-success" disabled>Complete Routine</button>
-                    <button id="pauseRoutine" class="btn btn-warning" disabled>Pause Routine</button>
-                    <button id="resumeRoutine" class="btn btn-info" disabled>Resume Routine</button>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Time to First Task</h5>
+                        <div class="display-4 mb-3" id="timeToFirstTask">00:00</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-12">
-                <h4>Routine Tasks</h4>
-                <div id="taskList">
+        <div class="row">
+            <div class="col-md-8">
+                <h4>Tasks</h4>
+                <div id="taskList" class="mb-3">
                     <!-- Tasks will be loaded here -->
                 </div>
                 
-                <div class="mt-3">
-                    <div class="input-group">
-                        <input type="text" id="newTaskInput" class="form-control" placeholder="Add new task">
-                        <button id="addTask" class="btn btn-outline-primary">Add Task</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="interruption-section">
-                    <h4>Interruption Recovery</h4>
-                    <p class="text-muted">Select the appropriate reset based on interruption severity:</p>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <button class="btn btn-success interruption-btn w-100" data-reset-type="minor" data-duration="30" data-steps="Take a deep breath, Look at your tracker, State what comes next">
-                                30 Second Reset
-                                <br><small>Minor Interruption</small>
-                            </button>
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-warning interruption-btn w-100" data-reset-type="moderate" data-duration="120" data-steps="Splash cold water on face, Quick body shake, Return to routine">
-                                2 Minute Reset
-                                <br><small>Moderate Interruption</small>
-                            </button>
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-danger interruption-btn w-100" data-reset-type="major" data-duration="300" data-steps="Brief meditation, Review entire remaining routine, Begin where I left off">
-                                5 Minute Reset
-                                <br><small>Major Interruption</small>
-                            </button>
-                        </div>
-                    </div>
+                <div class="input-group mb-3">
+                    <input type="text" id="newTaskInput" class="form-control" placeholder="Add a new task">
+                    <button id="addTask" class="btn btn-outline-primary">Add Task</button>
                 </div>
             </div>
         </div>
 
-        <!-- Reset Confirmation Modal -->
-        <div class="modal fade" id="resetConfirmModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Confirm Reset</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="resetDetails"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="startRecoveryBtn">Start Recovery</button>
-                    </div>
+        <!-- Interruption form -->
+        <div class="interruption-form" id="interruption-form">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Log Interruption</h5>
+                    <textarea id="interruption-reason" class="form-control mb-3" rows="3" placeholder="What interrupted you?"></textarea>
+                    <button id="save-interruption" class="btn btn-primary">Save Interruption</button>
                 </div>
             </div>
         </div>
 
-        <!-- Recovery Progress Modal -->
-        <div class="modal fade" id="recoveryProgressModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Recovery in Progress</h5>
-                    </div>
-                    <div class="modal-body">
-                        <div class="progress mb-3">
-                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                        </div>
-                        <div id="recoverySteps" class="mb-3"></div>
-                        <div id="currentRecoveryStep" class="alert alert-info"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" id="completeRecoveryBtn" disabled>
-                            Complete and Return to Routine
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add the new chart containers -->
-        <div class="chart-container">
-            <h4>Compliance History</h4>
-            <canvas id="complianceChart"></canvas>
-        </div>
-
-        <div class="chart-container">
-            <h4>Daily Interruptions</h4>
-            <canvas id="interruptionsChart"></canvas>
-        </div>
-
-        <div class="chart-container">
-            <h4>Steps Interruption Frequency</h4>
-            <canvas id="stepsInterruptionChart"></canvas>
-        </div>
-
-        <div class="chart-container">
-            <h4>Interruption Duration Distribution</h4>
-            <canvas id="durationHistogramChart"></canvas>
-        </div>
-        
-        <div class="interruption-history">
+        <!-- Interruption History -->
+        <div class="interruption-history mt-4">
             <h4>Interruption History</h4>
-            <table>
+            <table class="table">
                 <thead>
                     <tr>
-                        <th>Date</th>
                         <th>Time</th>
                         <th>Duration</th>
                         <th>Reason</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="interruption-log">
@@ -323,40 +231,91 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Charts -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <canvas id="interruptionsChart"></canvas>
+            </div>
+            <div class="col-md-6">
+                <canvas id="stepsInterruptionChart"></canvas>
+            </div>
+            <div class="col-md-12 mt-4">
+                <canvas id="durationHistogramChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <script type="module">
-        // Initialize Firebase
-        // Replace this with your own Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
-            authDomain: "misaplicaciones-a39bb.firebaseapp.com",
-            databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
-            projectId: "misaplicaciones-a39bb",
-            storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
-            messagingSenderId: "375780546756",
-            appId: "1:375780546756:web:c87ad2c8f5c7e71869d191",
-            measurementId: "G-NSZ17K1N89"
-        };
+    <script>
+        // Single initialization point for Firebase
+        let database;
+        let matutinaRef;
+        let historialRutinaRef;
+        let timerStateRef;
+        let interruptionsRef;
         
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        // Wait for Firebase SDK to load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase SDK not loaded');
+                return;
+            }
 
-        // Initialize date
-        const today = new Date();
-        const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        $('#currentDate').text(dateString);
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
+                authDomain: "misaplicaciones-a39bb.firebaseapp.com",
+                databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
+                projectId: "misaplicaciones-a39bb",
+                storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
+                messagingSenderId: "375780546756",
+                appId: "1:375780546756:web:c87ad2c8f5c7e71869d191",
+                measurementId: "G-NSZ17K1N89"
+            };
 
-        // Global Firebase database references
-        const historialRutinaRef = database.ref('historial_rutina');
-        const matutinaRef = database.ref('matutina_tasks');  // Changed to a more specific path
-        const timerStateRef = database.ref('timer_state');
-        const interruptionsRef = database.ref('interruptions');
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                
+                // Initialize database references with consistent paths
+                matutinaRef = database.ref('morning_routine/tasks');
+                historialRutinaRef = database.ref('morning_routine/history');
+                timerStateRef = database.ref('morning_routine/timer_state');
+                interruptionsRef = database.ref('morning_routine/interruptions');
 
-        // App state variables
+                console.log('Firebase initialized with path:', matutinaRef.toString());
+
+                // Test database connection
+                database.ref('.info/connected').once('value')
+                    .then((snap) => {
+                        if (snap.val() === true) {
+                            console.log('Connected to Firebase');
+                            return loadInitialTasks();
+                        } else {
+                            console.log('Not connected to Firebase');
+                            throw new Error('Not connected to Firebase');
+                        }
+                    })
+                    .then(() => {
+                        console.log('Initial tasks loaded');
+                        initializeApp();
+                    })
+                    .catch((error) => {
+                        console.error('Setup error:', error);
+                        $('#routineStatus').addClass('alert-danger')
+                            .html('Error connecting to database. Please refresh the page.');
+                    });
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                $('#routineStatus').addClass('alert-danger')
+                    .html('Error initializing application. Please refresh the page.');
+            }
+        });
+
+        // Single declarations of state variables
         let tasks = [];
         let routineStartTime = null;
-        let timeToFirstTask = null;  // Track time until first task completion
+        let timeToFirstTask = null;
         let firstTaskCompleted = false;
         let timerInterval = null;
         let complianceData = [];
@@ -365,7 +324,29 @@
         let totalPausedTime = 0;
         let lastPauseTime = null;
         let currentInterruptionId = null;
-        let currentInProgressTaskId = null;  // Added missing declaration
+        let currentInProgressTaskId = null;
+
+        // Single instance of connection monitoring
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            if (snap.val() === true) {
+                console.log('Connected to Firebase');
+                loadInitialTasks().then(() => {
+                    console.log('Initial tasks loaded');
+                }).catch(error => {
+                    console.error('Error loading initial tasks:', error);
+                });
+            } else {
+                console.log('Disconnected from Firebase');
+                $('#routineStatus').addClass('alert-danger')
+                    .html('Connection lost. Trying to reconnect...');
+            }
+        });
+
+        // Initialize date
+        const today = new Date();
+        const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        $('#currentDate').text(dateString);
 
         // Load interruptions from Firebase
         function loadInterruptions() {
@@ -915,31 +896,64 @@
         }
 
         // Event listeners and initialization
-        $(document).ready(async function() {
-            // Initialize Firebase listeners first
-            initializeFirebaseListeners();
-            
-            // Load initial timer state
-            await loadTimerState();
-            
-            // Set up real-time listener for tasks
-            matutinaRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                tasks = Object.keys(data).map(key => ({
-                    id: key,
-                    name: data[key].name,
-                    completed: data[key].completed || false,
-                    inProgress: data[key].inProgress || false,
-                    order: data[key].order || 0
-                })).sort((a, b) => (a.order || 0) - (b.order || 0));
-                
-                renderTasks();
-            });
+        function initializeApp() {
+            if (!window.firebase || !window.jQuery) {
+                setTimeout(initializeApp, 100);
+                return;
+            }
 
-            loadComplianceData();
-            loadInterruptions();
-            initializeCharts();
-            
+            $(async function() {
+                console.log('Starting app initialization...');
+                
+                // Initialize Firebase listeners first
+                initializeFirebaseListeners();
+                
+                try {
+                    // Load initial tasks and timer state
+                    console.log('Loading initial data...');
+                    await Promise.all([
+                        loadInitialTasks(),
+                        loadTimerState()
+                    ]);
+                    
+                    console.log('Initial data loaded successfully');
+                    
+                    // Set up real-time listener for tasks
+                    matutinaRef.on('value', (snapshot) => {
+                        console.log('Real-time task update received');
+                        const data = snapshot.val() || {};
+                        tasks = Object.keys(data).map(key => ({
+                            id: key,
+                            name: data[key].name,
+                            completed: data[key].completed || false,
+                            inProgress: data[key].inProgress || false,
+                            order: data[key].order || 0
+                        })).sort((a, b) => (a.order || 0) - (b.order || 0));
+                        
+                        console.log('Tasks updated:', tasks);
+                        renderTasks();
+                    });
+
+                    // Load other data
+                    await Promise.all([
+                        loadComplianceData(),
+                        loadInterruptions()
+                    ]);
+                    
+                    initializeCharts();
+                    console.log('App initialization complete');
+                } catch (error) {
+                    console.error('Error during initialization:', error);
+                    $('#routineStatus').addClass('alert-danger')
+                        .html('Error loading tasks. Please refresh the page.');
+                }
+                
+                // Initialize UI components
+                initializeUIComponents();
+            });
+        }
+
+        function initializeUIComponents() {
             // Initialize Sortable
             new Sortable(taskList, {
                 animation: 150,
@@ -950,8 +964,7 @@
                 }
             });
 
-            // Add other event listeners
-            // Add task button
+            // Add event listeners
             $('#addTask').on('click', function() {
                 const taskName = $('#newTaskInput').val().trim();
                 if (taskName) {
@@ -960,7 +973,6 @@
                 }
             });
 
-            // Enter key on input
             $('#newTaskInput').on('keypress', function(e) {
                 if (e.which === 13) {
                     const taskName = $(this).val().trim();
@@ -971,29 +983,15 @@
                 }
             });
 
-            // Start routine button
             $('#startRoutine').on('click', startRoutine);
-
-            // Pause routine button
             $('#pauseRoutine').on('click', pauseTimer);
-
-            // Resume routine button
             $('#resumeRoutine').on('click', resumeTimer);
-
-            // Complete routine button
             $('#completeRoutine').on('click', completeRoutine);
-
-            // Save interruption button
             $('#save-interruption').on('click', saveInterruption);
+        }
 
-            // Handle Enter key in interruption reason textarea
-            $('#interruption-reason').on('keypress', function(e) {
-                if (e.which === 13 && !e.shiftKey) {
-                    e.preventDefault();
-                    saveInterruption();
-                }
-            });
-        });
+        // Start initialization when scripts are loaded
+        initializeApp();
 
         // Add a new task
         function addTask(taskName) {
@@ -1418,12 +1416,45 @@
             initializeCharts();
         });
 
-        // Load tasks data from Firebase
+        // Load tasks data from Firebase with default tasks if none exist
         function loadInitialTasks() {
+            console.log('Loading initial tasks...');
             return new Promise((resolve, reject) => {
                 matutinaRef.once('value')
                     .then((snapshot) => {
-                        const data = snapshot.val() || {};
+                        const data = snapshot.val();
+                        console.log('Loaded tasks data:', data);
+                        
+                        if (!data) {
+                            // Add default tasks if none exist
+                            const defaultTasks = [
+                                { name: 'Take medication', order: 0 },
+                                { name: 'Drink water', order: 1 },
+                                { name: 'Stretching', order: 2 }
+                            ];
+                            
+                            const updates = {};
+                            defaultTasks.forEach(task => {
+                                const newRef = matutinaRef.push().key;
+                                updates[newRef] = {
+                                    name: task.name,
+                                    completed: false,
+                                    inProgress: false,
+                                    order: task.order,
+                                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                                };
+                            });
+                            
+                            return matutinaRef.update(updates).then(() => {
+                                tasks = Object.keys(updates).map(key => ({
+                                    id: key,
+                                    ...updates[key]
+                                }));
+                                renderTasks();
+                                resolve();
+                            });
+                        }
+                        
                         tasks = Object.keys(data).map(key => ({
                             id: key,
                             name: data[key].name,
@@ -1432,6 +1463,7 @@
                             order: data[key].order || 0
                         })).sort((a, b) => (a.order || 0) - (b.order || 0));
                         
+                        console.log('Processed tasks:', tasks);
                         renderTasks();
                         resolve();
                     })
