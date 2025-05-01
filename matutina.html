@@ -609,38 +609,42 @@
 
         // Load timer state from Firebase
         function loadTimerState() {
-            timerStateRef.once('value', (snapshot) => {
+            timerStateRef.on('value', (snapshot) => {
                 const state = snapshot.val();
                 if (state && state.running) {
                     routineStartTime = new Date(state.startTime);
                     isPaused = state.paused || false;
                     totalPausedTime = state.totalPausedTime || 0;
+                    currentInProgressTaskId = state.currentInProgressTaskId || null;
                     
                     if (isPaused && state.lastPauseTime) {
                         lastPauseTime = new Date(state.lastPauseTime);
-                        // Calculate and display current elapsed time for paused state
-                        const now = new Date();
-                        const elapsedMs = (now - routineStartTime) - totalPausedTime;
-                        const minutes = Math.floor(elapsedMs / 60000);
-                        const seconds = Math.floor((elapsedMs % 60000) / 1000);
-                        $('#currentTimer').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-                        
-                        // Show interruption form when loading in paused state
-                        showInterruptionForm();
                     }
                     
                     updateButtonStates();
-                    
-                    if (isPaused) {
-                        $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
-                            .html('Routine paused... <span class="timer-paused">Timer paused</span>');
-                    } else {
-                        $('#routineStatus').removeClass('alert-info').addClass('alert-warning')
-                            .html('Routine in progress... <span class="timer-running">Timer running</span>');
-                        startTimerIntervals();
-                    }
+                    updateUIState();
                 }
             });
+        }
+
+        function updateUIState() {
+            if (!routineStartTime) {
+                $('#routineStatus').removeClass('alert-warning alert-success').addClass('alert-info')
+                    .html('Ready to start your routine');
+                return;
+            }
+
+            if (isPaused) {
+                $('#routineStatus').removeClass('alert-info alert-success').addClass('alert-warning')
+                    .html('Routine paused... <span class="timer-paused">Timer paused</span>');
+                showInterruptionForm();
+                updateTimer(); // Update timer display immediately
+            } else {
+                $('#routineStatus').removeClass('alert-info alert-success').addClass('alert-warning')
+                    .html('Routine in progress... <span class="timer-running">Timer running</span>');
+                hideInterruptionForm();
+                startTimerIntervals();
+            }
         }
 
         // Complete routine
@@ -839,16 +843,40 @@
             });
         }
 
-        // Event listeners
+        // Event listeners and initialization
         $(document).ready(function() {
             // Load initial data
-            loadTasks();
+            matutinaRef.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                tasks = Object.keys(data).map(key => ({
+                    id: key,
+                    name: data[key].name,
+                    completed: data[key].completed || false,
+                    inProgress: data[key].inProgress || false,
+                    order: data[key].order || 0
+                }));
+                
+                // Sort tasks by order
+                tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+                renderTasks();
+            });
+
             loadComplianceData();
             loadTimerState();
-
-            // Load interruptions on page load
             loadInterruptions();
+            initializeCharts();
+            
+            // Initialize Sortable
+            new Sortable(taskList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    const taskIds = Array.from(taskList.children).map(item => item.dataset.id);
+                    updateTaskOrder(taskIds);
+                }
+            });
 
+            // Add other event listeners
             // Add task button
             $('#addTask').on('click', function() {
                 const taskName = $('#newTaskInput').val().trim();
@@ -893,16 +921,18 @@
             });
         });
 
-        // Load tasks from Firebase
-        function loadTasks() {
-            matutinaRef.once('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                tasks = Object.keys(data).map(key => ({
-                    id: key,
-                    name: data[key].name,
-                    completed: data[key].completed || false
-                }));
-                renderTasks();
+        // Add a new task
+        function addTask(taskName) {
+            // Get the highest current order
+            const maxOrder = tasks.reduce((max, task) => Math.max(max, task.order || 0), -1);
+            
+            const newTaskRef = matutinaRef.push();
+            newTaskRef.set({
+                name: taskName,
+                completed: false,
+                inProgress: false,
+                order: maxOrder + 1,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
             });
         }
 
@@ -1013,17 +1043,6 @@
             }
         }
 
-        // Add a new task
-        function addTask(taskName) {
-            const newTaskRef = matutinaRef.push();
-            newTaskRef.set({
-                name: taskName,
-                completed: false,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
-        }
-    </script>
-    <script>
         // Interruption Management
         let currentResetType = null;
         let currentResetDuration = null;
