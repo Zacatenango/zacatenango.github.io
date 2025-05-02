@@ -52,6 +52,10 @@ class UIController {
                 this.saveInterruption();
             }
         });
+
+        $('#briefInterruption').on('click', () => this.handleInterruption('brief', 30));
+        $('#moderateInterruption').on('click', () => this.handleInterruption('moderate', 120));
+        $('#majorInterruption').on('click', () => this.handleInterruption('major', 300));
     }
 
     initializeFirebaseListeners() {
@@ -364,6 +368,52 @@ class UIController {
         this.state.currentInterruptionId = ref.key;
         this.hideInterruptionForm();
         await this.loadInitialData();
+    }
+
+    async handleInterruption(type, durationSeconds) {
+        if (!this.state.routineStartTime || this.state.isPaused) return;
+
+        this.state.isPaused = true;
+        this.state.lastPauseTime = new Date();
+        
+        const currentTask = this.state.tasks.find(t => t.inProgress);
+        this.state.currentInProgressTaskId = currentTask?.id;
+
+        if (this.state.timerInterval) {
+            clearInterval(this.state.timerInterval.display);
+            clearInterval(this.state.timerInterval.sync);
+        }
+
+        // Record the interruption automatically
+        const interruption = {
+            timestamp: Date.now(),
+            type: type,
+            duration: durationSeconds * 1000,
+            currentStep: currentTask?.name || 'No task in progress',
+            reason: `${type.charAt(0).toUpperCase() + type.slice(1)} interruption - ${durationSeconds}s reset`
+        };
+
+        await this.firebaseService.saveInterruption(interruption);
+        
+        // Update UI
+        this.updateButtonStates();
+        $('#routineStatus')
+            .removeClass('alert-info alert-success')
+            .addClass('alert-warning')
+            .html(`Paused: ${type} interruption (${durationSeconds}s reset)`);
+
+        // Set a timer to auto-resume
+        setTimeout(() => {
+            if (this.state.isPaused) {
+                this.resumeTimer();
+                $('#routineStatus')
+                    .removeClass('alert-warning')
+                    .addClass('alert-info')
+                    .html('Routine resumed after interruption');
+            }
+        }, durationSeconds * 1000);
+
+        this.updateTimerStateInFirebase();
     }
 
     renderInterruptions(interruptions) {

@@ -73,6 +73,28 @@
                     <input type="text" id="newTaskInput" class="form-control" placeholder="Add a new task...">
                     <button id="addTask" class="btn btn-outline-primary">Add Task</button>
                 </div>
+
+                <div class="interruptions-section mt-4">
+                    <h4>Interruptions</h4>
+                    <p class="text-muted">Select the type of interruption you experienced:</p>
+                    <div class="interruption-buttons">
+                        <button id="briefInterruption" class="btn btn-success btn-lg interruption-btn">
+                            <i class="bi bi-lightning-charge"></i>
+                            <span>30s Reset</span>
+                            <small class="d-block">Brief Interruption</small>
+                        </button>
+                        <button id="moderateInterruption" class="btn btn-warning btn-lg interruption-btn">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span>2m Reset</span>
+                            <small class="d-block">Moderate Interruption</small>
+                        </button>
+                        <button id="majorInterruption" class="btn btn-danger btn-lg interruption-btn">
+                            <i class="bi bi-stop-circle"></i>
+                            <span>5m Restart</span>
+                            <small class="d-block">Major Interruption</small>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="col-md-4">
