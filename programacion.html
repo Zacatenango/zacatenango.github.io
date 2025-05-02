@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coding Time Tracker</title>
+    <!-- jQuery and jQuery UI -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .todo-list {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .todo-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: move;
+            border: 1px solid #ddd;
+        }
+        .timer-section {
+            text-align: center;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .timer-display {
+            font-size: 48px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #startTimer {
+            background: #4CAF50;
+            color: white;
+        }
+        #stopTimer {
+            background: #f44336;
+            color: white;
+        }
+        .chart-container {
+            grid-column: 1 / -1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Coding Time Tracker</h1>
+    
+    <div class="container">
+        <div class="todo-list">
+            <h2>Tasks</h2>
+            <input type="text" id="newTask" placeholder="Add new task">
+            <button onclick="addTask()">Add Task</button>
+            <div id="taskList"></div>
+        </div>
+        
+        <div class="timer-section">
+            <h2>Timer</h2>
+            <div class="timer-display" id="timer">00:00:00</div>
+            <button id="startTimer">Start</button>
+            <button id="stopTimer">Stop</button>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="timeChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            // Replace with your Firebase config
+            apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
+            authDomain: "misaplicaciones-a39bb.firebaseapp.com",
+            databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
+            projectId: "misaplicaciones-a39bb",
+            storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
+            messagingSenderId: "375780546756",
+            appId: "1:375780546756:web:f1ce5bb3fbc262cf69d191",
+            measurementId: "G-2MMETLQZ7X"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Timer variables
+        let timerInterval;
+        let startTime;
+        let isRunning = false;
+        let elapsedTime = 0;
+
+        // Initialize Chart
+        const ctx = document.getElementById('timeChart').getContext('2d');
+        const timeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Coding Time (hours)',
+                    data: [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Timer functions
+        function updateTimer() {
+            const currentTime = Date.now();
+            const timeElapsed = new Date(currentTime - startTime + elapsedTime);
+            const hours = timeElapsed.getUTCHours().toString().padStart(2, '0');
+            const minutes = timeElapsed.getUTCMinutes().toString().padStart(2, '0');
+            const seconds = timeElapsed.getUTCSeconds().toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        $('#startTimer').click(function() {
+            if (!isRunning) {
+                isRunning = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+                database.ref('timer').set({ isRunning: true, startTime: startTime, elapsedTime });
+            }
+        });
+
+        $('#stopTimer').click(function() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                elapsedTime += Date.now() - startTime;
+                database.ref('timer').set({ isRunning: false, elapsedTime });
+                
+                // Save daily time
+                const today = new Date().toISOString().split('T')[0];
+                const hoursToday = elapsedTime / (1000 * 60 * 60);
+                database.ref('dailyTime/' + today).set(hoursToday);
+                updateChart();
+            }
+        });
+
+        // Task functions
+        function addTask() {
+            const taskInput = document.getElementById('newTask');
+            const taskText = taskInput.value.trim();
+            
+            if (taskText) {
+                const newTaskRef = database.ref('tasks').push();
+                newTaskRef.set({
+                    text: taskText,
+                    order: Date.now()
+                });
+                taskInput.value = '';
+            }
+        }
+
+        // Make tasks draggable
+        function initDraggable() {
+            $("#taskList").sortable({
+                update: function(event, ui) {
+                    const tasks = {};
+                    $('#taskList .todo-item').each(function(index) {
+                        const taskId = $(this).attr('data-id');
+                        tasks[taskId] = {
+                            text: $(this).text(),
+                            order: index
+                        };
+                    });
+                    database.ref('tasks').set(tasks);
+                }
+            });
+        }
+
+        // Update chart
+        function updateChart() {
+            database.ref('dailyTime').orderByKey().limitToLast(7).once('value', snapshot => {
+                const data = snapshot.val() || {};
+                timeChart.data.labels = Object.keys(data);
+                timeChart.data.datasets[0].data = Object.values(data);
+                timeChart.update();
+            });
+        }
+
+        // Firebase listeners
+        database.ref('tasks').on('value', snapshot => {
+            const tasks = snapshot.val() || {};
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            
+            Object.entries(tasks)
+                .sort((a, b) => a[1].order - b[1].order)
+                .forEach(([id, task]) => {
+                    const div = document.createElement('div');
+                    div.className = 'todo-item';
+                    div.setAttribute('data-id', id);
+                    div.textContent = task.text;
+                    taskList.appendChild(div);
+                });
+            
+            initDraggable();
+        });
+
+        database.ref('timer').on('value', snapshot => {
+            const timerData = snapshot.val() || {};
+            if (timerData.isRunning && !isRunning) {
+                isRunning = true;
+                startTime = timerData.startTime;
+                elapsedTime = timerData.elapsedTime || 0;
+                timerInterval = setInterval(updateTimer, 1000);
+            } else if (!timerData.isRunning && isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                elapsedTime = timerData.elapsedTime || 0;
+                updateTimer();
+            }
+        });
+
+        // Initial chart load
+        updateChart();
+    </script>
+</body>
+</html>
