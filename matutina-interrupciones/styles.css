@@ -1,0 +1,89 @@
+body {
+    background-color: #f8f9fa;
+    padding-top: 20px;
+    padding-bottom: 40px;
+}
+.app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+}
+.task-item {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    transition: all 0.3s;
+}
+.task-item:hover {
+    background-color: #e9ecef;
+}
+.task-done {
+    background-color: #d4edda;
+}
+.task-done:hover {
+    background-color: #c3e6cb;
+}
+.chart-container {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.timer-running {
+    color: #dc3545;
+    font-weight: bold;
+}
+.timer-paused {
+    color: #ffc107;
+    font-weight: bold;
+}
+#resumeRoutine {
+    display: none;
+}
+.btn-group {
+    display: flex;
+    gap: 5px;
+}
+.summary-box {
+    background-color: #f0f7ff;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.streak-count {
+    font-size: 24px;
+    font-weight: bold;
+    color: #198754;
+}
+.interruption-form {
+    display: none;
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #fff3cd;
+    border-radius: 5px;
+    border: 1px solid #ffeeba;
+}
+.interruption-form.visible {
+    display: block;
+}
+.interruption-history {
+    margin-top: 20px;
+}
+.interruption-history table {
+    width: 100%;
+    margin-top: 10px;
+}
+.interruption-history th {
+    background-color: #f8f9fa;
+    padding: 8px;
+    border-bottom: 2px solid #dee2e6;
+}
+.interruption-history td {
+    padding: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
