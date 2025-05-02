@@ -25,12 +25,7 @@ class UIController {
     }
 
     setupDateDisplay() {
-        const today = new Date();
-        const dateString = today.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
+        const dateString = this.getCurrentDateString();
         $('#currentDate').text(dateString);
     }
 
@@ -45,17 +40,6 @@ class UIController {
         $('#resumeRoutine').on('click', () => this.resumeTimer());
         $('#completeRoutine').on('click', () => this.completeRoutine());
         $('#save-interruption').on('click', () => this.saveInterruption());
-        
-        $('#interruption-reason').on('keypress', (e) => {
-            if (e.which === 13 && !e.shiftKey) {
-                e.preventDefault();
-                this.saveInterruption();
-            }
-        });
-
-        $('#briefInterruption').on('click', () => this.handleInterruption('brief', 30));
-        $('#moderateInterruption').on('click', () => this.handleInterruption('moderate', 120));
-        $('#majorInterruption').on('click', () => this.handleInterruption('major', 300));
     }
 
     initializeFirebaseListeners() {
@@ -98,8 +82,9 @@ class UIController {
             }
 
             this.renderTasks();
-            this.renderInterruptions(interruptions);
             this.chartManager.renderComplianceChart(history);
+            this.renderInterruptionHistory(interruptions);
+            this.calculateStats(history);
         } catch (error) {
             console.error('Error loading initial data:', error);
             this.showError('Error loading data. Please refresh the page.');
@@ -116,37 +101,36 @@ class UIController {
         }
         
         this.state.tasks.forEach(task => {
-            const taskElement = $(`
-                <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
-                    <div class="form-check">
-                        <input class="form-check-input task-checkbox" type="checkbox" 
-                               id="task-${task.id}" ${task.completed ? 'checked' : ''}>
-                        <label class="form-check-label" for="task-${task.id}">
-                            ${task.name}
-                        </label>
-                        <button class="btn btn-sm btn-outline-danger float-end delete-task">
-                            <i class="bi bi-trash"></i> Remove
-                        </button>
-                    </div>
-                </div>
-            `);
+            const taskElement = this.createTaskElement(task);
             taskListElement.append(taskElement);
         });
-        
-        this.attachTaskEventListeners();
     }
 
-    attachTaskEventListeners() {
-        $('.task-checkbox').on('change', (e) => {
-            const taskId = $(e.target).closest('.task-item').data('id');
-            const isCompleted = $(e.target).is(':checked');
-            this.updateTaskStatus(taskId, isCompleted);
+    createTaskElement(task) {
+        const taskElement = $(`
+            <div class="task-item ${task.completed ? 'task-done' : ''}" data-id="${task.id}">
+                <div class="form-check">
+                    <input class="form-check-input task-checkbox" type="checkbox" 
+                           id="task-${task.id}" ${task.completed ? 'checked' : ''}>
+                    <label class="form-check-label" for="task-${task.id}">
+                        ${task.name}
+                    </label>
+                    <button class="btn btn-sm btn-outline-danger float-end delete-task">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `);
+
+        taskElement.find('.task-checkbox').on('change', (e) => {
+            this.updateTaskStatus(task.id, e.target.checked);
         });
-        
-        $('.delete-task').on('click', (e) => {
-            const taskId = $(e.target).closest('.task-item').data('id');
-            this.deleteTask(taskId);
+
+        taskElement.find('.delete-task').on('click', () => {
+            this.deleteTask(task.id);
         });
+
+        return taskElement;
     }
 
     async handleAddTask() {
@@ -158,7 +142,7 @@ class UIController {
     }
 
     async updateTaskStatus(taskId, isCompleted) {
-        await this.firebaseService.updateTaskStatus(taskId, { completed: isCompleted });
+        await this.firebaseService.updateTaskStatus(taskId, isCompleted);
 
         if (isCompleted && !this.state.firstTaskCompleted && this.state.routineStartTime) {
             this.state.firstTaskCompleted = true;
@@ -195,16 +179,17 @@ class UIController {
 
         this.state.isPaused = true;
         this.state.lastPauseTime = new Date();
-        
+
         if (this.state.timerInterval) {
             clearInterval(this.state.timerInterval.display);
             clearInterval(this.state.timerInterval.sync);
         }
 
         this.updateButtonStates();
-        $('#routineStatus').html('Routine paused... <span class="timer-paused">Timer paused</span>');
         this.showInterruptionForm();
         this.updateTimerStateInFirebase();
+
+        $('#routineStatus').html('Routine paused... <span class="timer-paused">Timer paused</span>');
     }
 
     resumeTimer() {
@@ -218,12 +203,13 @@ class UIController {
 
         this.state.isPaused = false;
         this.state.lastPauseTime = null;
-        this.state.currentInterruptionId = null;
 
         this.updateButtonStates();
-        $('#routineStatus').html('Routine in progress... <span class="timer-running">Timer running</span>');
         this.startTimerIntervals();
         this.updateTimerStateInFirebase();
+
+        $('#routineStatus')
+            .html('Routine in progress... <span class="timer-running">Timer running</span>');
     }
 
     async completeRoutine() {
@@ -235,11 +221,14 @@ class UIController {
         }
 
         const endTime = new Date();
-        const durationMinutes = Math.round(((endTime - this.state.routineStartTime) - this.state.totalPausedTime) / 60000);
+        const durationMinutes = Math.round(
+            ((endTime - this.state.routineStartTime) - this.state.totalPausedTime) / 60000
+        );
 
         const completedCount = this.state.tasks.filter(task => task.completed).length;
-        const completionPercent = this.state.tasks.length > 0 ? 
-            Math.round((completedCount / this.state.tasks.length) * 100) : 0;
+        const completionPercent = this.state.tasks.length > 0 
+            ? Math.round((completedCount / this.state.tasks.length) * 100) 
+            : 0;
 
         const routineRecord = {
             date: this.getCurrentDateString(),
@@ -256,12 +245,29 @@ class UIController {
         await this.firebaseService.saveTimerState({ running: false, paused: false });
 
         this.resetTimerState();
-        this.updateButtonStates();
-        $('#routineStatus')
-            .removeClass('alert-warning')
-            .addClass('alert-success')
-            .html(`Routine completed! <strong>${durationMinutes} minutes</strong> with ${completionPercent}% tasks completed`);
-            
+        this.showCompletionMessage(durationMinutes, completionPercent);
+        await this.loadInitialData();
+    }
+
+    async saveInterruption() {
+        const reason = $('#interruption-reason').val().trim();
+        if (!reason) {
+            alert('Please provide a reason for the interruption');
+            return;
+        }
+
+        const now = new Date();
+        const duration = now - this.state.lastPauseTime;
+
+        const interruption = {
+            timestamp: now.getTime(),
+            reason: reason,
+            duration: duration,
+            routineId: this.state.routineStartTime.getTime()
+        };
+
+        await this.firebaseService.saveInterruption(interruption);
+        this.hideInterruptionForm();
         await this.loadInitialData();
     }
 
@@ -270,7 +276,7 @@ class UIController {
         $('#completeRoutine').prop('disabled', !this.state.routineStartTime || this.state.isPaused);
         $('#pauseRoutine').prop('disabled', !this.state.routineStartTime || this.state.isPaused);
         $('#resumeRoutine').prop('disabled', !this.state.routineStartTime || !this.state.isPaused);
-        
+
         if (this.state.routineStartTime) {
             if (this.state.isPaused) {
                 $('#pauseRoutine').hide();
@@ -280,6 +286,13 @@ class UIController {
                 $('#resumeRoutine').hide();
             }
         }
+    }
+
+    startTimerIntervals() {
+        this.updateTimer();
+        const displayInterval = setInterval(() => this.updateTimer(), 1000);
+        const syncInterval = setInterval(() => this.updateTimerStateInFirebase(), 60000);
+        this.state.timerInterval = { display: displayInterval, sync: syncInterval };
     }
 
     updateTimer() {
@@ -301,32 +314,91 @@ class UIController {
         }
     }
 
-    startTimerIntervals() {
-        this.updateTimer();
-        const displayInterval = setInterval(() => this.updateTimer(), 1000);
-        const syncInterval = setInterval(() => this.updateTimerStateInFirebase(), 15000);
-        this.state.timerInterval = { display: displayInterval, sync: syncInterval };
-    }
-
     async updateTimerStateInFirebase() {
         if (!this.state.routineStartTime) return;
 
         const now = new Date();
         const elapsedMs = (now - this.state.routineStartTime) - this.state.totalPausedTime;
-        
+
         await this.firebaseService.saveTimerState({
             running: true,
-            elapsedMinutes: Math.floor(elapsedMs / 60000),
-            elapsedSeconds: Math.floor((elapsedMs % 60000) / 1000),
-            totalPausedTime: this.state.totalPausedTime,
             paused: this.state.isPaused,
             startTime: this.state.routineStartTime.toISOString(),
+            totalPausedTime: this.state.totalPausedTime,
             lastPauseTime: this.state.lastPauseTime ? this.state.lastPauseTime.toISOString() : null,
-            currentInterruptionId: this.state.currentInterruptionId,
             firstTaskCompleted: this.state.firstTaskCompleted,
-            timeToFirstTask: this.state.timeToFirstTask,
-            lastUpdated: Date.now()
+            timeToFirstTask: this.state.timeToFirstTask
         });
+    }
+
+    renderInterruptionHistory(interruptions) {
+        const tbody = $('#interruption-log');
+        tbody.empty();
+
+        if (interruptions.length === 0) {
+            tbody.append('<tr><td colspan="4">No interruptions logged yet</td></tr>');
+        } else {
+            interruptions.forEach(interruption => {
+                const date = new Date(interruption.timestamp);
+                const formattedDate = date.toLocaleDateString();
+                const formattedTime = date.toLocaleTimeString();
+                const duration = Math.round(interruption.duration / 60000);
+
+                tbody.append(`
+                    <tr>
+                        <td>${formattedDate}</td>
+                        <td>${formattedTime}</td>
+                        <td>${duration} min</td>
+                        <td>${interruption.reason}</td>
+                    </tr>
+                `);
+            });
+        }
+    }
+
+    calculateStats(data) {
+        // Sort by timestamp
+        data.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Calculate current streak
+        let currentStreak = 0;
+        const msPerDay = 24 * 60 * 60 * 1000;
+        
+        for (let i = data.length - 1; i >= 0; i--) {
+            if (i === data.length - 1) {
+                const recordDate = new Date(data[i].timestamp);
+                const today = new Date();
+                if (today.toDateString() === recordDate.toDateString()) {
+                    currentStreak = 1;
+                } else {
+                    const dayDiff = Math.floor((today - recordDate) / msPerDay);
+                    if (dayDiff > 1) break;
+                    currentStreak = 1;
+                }
+            } else {
+                const currentDate = new Date(data[i].timestamp);
+                const prevDate = new Date(data[i+1].timestamp);
+                const dayDiff = Math.floor((prevDate - currentDate) / msPerDay);
+                
+                if (dayDiff <= 1) {
+                    currentStreak++;
+                } else {
+                    break;
+                }
+            }
+        }
+        
+        $('#currentStreak').text(currentStreak);
+        
+        if (data.length > 0) {
+            const totalCompletionRate = data.reduce((sum, record) => sum + record.completionRate, 0);
+            const avgCompletionRate = Math.round(totalCompletionRate / data.length);
+            $('#completionRate').text(`${avgCompletionRate}%`);
+            
+            const totalDuration = data.reduce((sum, record) => sum + record.durationMinutes, 0);
+            const avgDuration = Math.round(totalDuration / data.length);
+            $('#averageDuration').text(avgDuration);
+        }
     }
 
     getCurrentDateString() {
@@ -347,115 +419,11 @@ class UIController {
         $('#interruption-reason').val('');
     }
 
-    async saveInterruption() {
-        const reason = $('#interruption-reason').val().trim();
-        if (!reason) {
-            alert('Please provide a reason for the interruption');
-            return;
-        }
-        
-        const now = new Date();
-        const duration = now - this.state.lastPauseTime;
-        
-        const interruption = {
-            timestamp: now.getTime(),
-            reason: reason,
-            duration: duration,
-            routineId: this.state.routineStartTime.getTime()
-        };
-        
-        const ref = await this.firebaseService.saveInterruption(interruption);
-        this.state.currentInterruptionId = ref.key;
-        this.hideInterruptionForm();
-        await this.loadInitialData();
-    }
-
-    async handleInterruption(type, durationSeconds) {
-        if (!this.state.routineStartTime || this.state.isPaused) return;
-
-        this.state.isPaused = true;
-        this.state.lastPauseTime = new Date();
-        
-        const currentTask = this.state.tasks.find(t => t.inProgress);
-        this.state.currentInProgressTaskId = currentTask?.id;
-
-        if (this.state.timerInterval) {
-            clearInterval(this.state.timerInterval.display);
-            clearInterval(this.state.timerInterval.sync);
-        }
-
-        // Record the interruption automatically
-        const interruption = {
-            timestamp: Date.now(),
-            type: type,
-            duration: durationSeconds * 1000,
-            currentStep: currentTask?.name || 'No task in progress',
-            reason: `${type.charAt(0).toUpperCase() + type.slice(1)} interruption - ${durationSeconds}s reset`
-        };
-
-        await this.firebaseService.saveInterruption(interruption);
-        
-        // Update UI
-        this.updateButtonStates();
+    showCompletionMessage(durationMinutes, completionPercent) {
         $('#routineStatus')
-            .removeClass('alert-info alert-success')
-            .addClass('alert-warning')
-            .html(`Paused: ${type} interruption (${durationSeconds}s reset)`);
-
-        // Set a timer to auto-resume
-        setTimeout(() => {
-            if (this.state.isPaused) {
-                this.resumeTimer();
-                $('#routineStatus')
-                    .removeClass('alert-warning')
-                    .addClass('alert-info')
-                    .html('Routine resumed after interruption');
-            }
-        }, durationSeconds * 1000);
-
-        this.updateTimerStateInFirebase();
-    }
-
-    renderInterruptions(interruptions) {
-        const tbody = $('#interruption-log');
-        tbody.empty();
-
-        if (interruptions.length === 0) {
-            tbody.append('<tr><td colspan="4">No interruptions logged yet</td></tr>');
-        } else {
-            interruptions.forEach(interruption => {
-                const date = new Date(interruption.timestamp);
-                const formattedDate = date.toLocaleDateString();
-                const formattedTime = date.toLocaleTimeString();
-                const duration = Math.round(interruption.duration / 60000);
-                
-                tbody.append(`
-                    <tr>
-                        <td>${formattedDate}</td>
-                        <td>${formattedTime}</td>
-                        <td>${duration} min</td>
-                        <td>${interruption.reason}</td>
-                    </tr>
-                `);
-            });
-        }
-    }
-
-    updateTimerState(state) {
-        if (state.startTime) {
-            this.state.routineStartTime = new Date(state.startTime);
-        }
-        this.state.isPaused = state.paused;
-        this.state.totalPausedTime = state.totalPausedTime || 0;
-        this.state.lastPauseTime = state.lastPauseTime ? new Date(state.lastPauseTime) : null;
-        this.state.currentInterruptionId = state.currentInterruptionId;
-        this.state.firstTaskCompleted = state.firstTaskCompleted;
-        this.state.timeToFirstTask = state.timeToFirstTask;
-
-        this.updateButtonStates();
-        if (!this.state.isPaused) {
-            this.startTimerIntervals();
-        }
+            .removeClass('alert-warning')
+            .addClass('alert-success')
+            .html(`Routine completed! <strong>${durationMinutes} minutes</strong> with ${completionPercent}% tasks completed`);
     }
 
     showConnectionError() {
@@ -475,7 +443,8 @@ class UIController {
         this.state.isPaused = false;
         this.state.totalPausedTime = 0;
         this.state.lastPauseTime = null;
-        this.state.currentInterruptionId = null;
+        this.state.firstTaskCompleted = false;
+        this.state.timeToFirstTask = null;
 
         if (this.state.timerInterval) {
             clearInterval(this.state.timerInterval.display);
@@ -487,6 +456,20 @@ class UIController {
             .removeClass('alert-warning alert-success')
             .addClass('alert-info')
             .html('Ready to start your routine');
+    }
+
+    updateTimerState(state) {
+        this.state.routineStartTime = new Date(state.startTime);
+        this.state.isPaused = state.paused;
+        this.state.totalPausedTime = state.totalPausedTime || 0;
+        this.state.lastPauseTime = state.lastPauseTime ? new Date(state.lastPauseTime) : null;
+        this.state.firstTaskCompleted = state.firstTaskCompleted;
+        this.state.timeToFirstTask = state.timeToFirstTask;
+
+        this.updateButtonStates();
+        if (!this.state.isPaused) {
+            this.startTimerIntervals();
+        }
     }
 }
 

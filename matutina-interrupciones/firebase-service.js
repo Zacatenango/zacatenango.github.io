@@ -14,41 +14,33 @@ class FirebaseService {
     // Tasks
     async loadTasks() {
         const snapshot = await this.refs.tasks.once('value');
-        const data = snapshot.val();
-        if (!data) {
-            return this.initializeDefaultTasks();
-        }
-        return this.transformTasks(data);
-    }
-
-    async initializeDefaultTasks() {
-        const defaultTasks = [
-            { name: 'Take medication', order: 0 },
-            { name: 'Drink water', order: 1 },
-            { name: 'Stretching', order: 2 }
-        ];
-
-        const updates = {};
-        defaultTasks.forEach(task => {
-            const newRef = this.refs.tasks.push().key;
-            updates[newRef] = {
-                ...task,
-                completed: false,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            };
-        });
-
-        await this.refs.tasks.update(updates);
-        return this.transformTasks(updates);
+        return this.transformTasks(snapshot.val() || {});
     }
 
     transformTasks(data) {
         return Object.keys(data).map(key => ({
             id: key,
             name: data[key].name,
-            completed: data[key].completed || false,
-            order: data[key].order || 0
-        })).sort((a, b) => (a.order || 0) - (b.order || 0));
+            completed: data[key].completed || false
+        }));
+    }
+
+    async addTask(taskName) {
+        const newTaskRef = this.refs.tasks.push();
+        await newTaskRef.set({
+            name: taskName,
+            completed: false,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        return newTaskRef.key;
+    }
+
+    async deleteTask(taskId) {
+        return this.refs.tasks.child(taskId).remove();
+    }
+
+    async updateTaskStatus(taskId, isCompleted) {
+        return this.refs.tasks.child(taskId).update({ completed: isCompleted });
     }
 
     // Timer State
@@ -92,35 +84,10 @@ class FirebaseService {
         return Object.values(snapshot.val() || {});
     }
 
-    // Task Operations
-    async updateTaskStatus(taskId, updates) {
-        return this.refs.tasks.child(taskId).update(updates);
-    }
-
-    async addTask(taskName) {
-        const newTaskRef = this.refs.tasks.push();
-        await newTaskRef.set({
-            name: taskName,
-            completed: false,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
-        return newTaskRef.key;
-    }
-
-    async deleteTask(taskId) {
-        return this.refs.tasks.child(taskId).remove();
-    }
-
-    // Connection monitoring
-    onConnectionChange(callback) {
-        this.database.ref('.info/connected').on('value', callback);
-    }
-
     // Real-time listeners
     onTasksChange(callback) {
         this.refs.tasks.on('value', snapshot => {
-            const data = snapshot.val() || {};
-            callback(this.transformTasks(data));
+            callback(this.transformTasks(snapshot.val() || {}));
         });
     }
 
@@ -128,6 +95,11 @@ class FirebaseService {
         this.refs.timerState.on('value', snapshot => {
             callback(snapshot.val());
         });
+    }
+
+    // Connection monitoring
+    onConnectionChange(callback) {
+        this.database.ref('.info/connected').on('value', callback);
     }
 }
 

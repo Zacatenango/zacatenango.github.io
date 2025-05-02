@@ -1,28 +1,17 @@
 class ChartManager {
     constructor() {
-        this.complianceChart = null;
-    }
-
-    processComplianceData(data) {
-        return {
-            labels: data.map(record => record.date),
-            durations: data.map(record => record.durationMinutes),
-            completionRates: data.map(record => record.completionRate),
-            firstTaskTimes: data.map(record => 
-                record.timeToFirstTaskMs ? Math.round(record.timeToFirstTaskMs / 60000) : null
-            )
-        };
+        this.chart = null;
     }
 
     renderComplianceChart(data = []) {
         const ctx = document.getElementById('complianceChart').getContext('2d');
         const chartData = this.processComplianceData(data);
 
-        if (this.complianceChart) {
-            this.complianceChart.destroy();
+        if (this.chart) {
+            this.chart.destroy();
         }
 
-        this.complianceChart = new Chart(ctx, {
+        this.chart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: chartData.labels,
@@ -88,6 +77,17 @@ class ChartManager {
                 }
             }
         });
+    }
+
+    processComplianceData(data) {
+        return {
+            labels: data.map(record => record.date),
+            durations: data.map(record => record.durationMinutes),
+            completionRates: data.map(record => record.completionRate),
+            firstTaskTimes: data.map(record => 
+                record.timeToFirstTaskMs ? Math.round(record.timeToFirstTaskMs / 60000) : null
+            )
+        };
     }
 }
 

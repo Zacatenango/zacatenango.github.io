@@ -5,123 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Morning Routine Tracker</title>
     
-    <!-- Styles -->
+    <!-- External CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
 
-    <!-- Load Firebase SDK first -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
-    <!-- Dependencies -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- External JS Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <div class="container app-container">
-        <h2 class="text-center mb-4">Morning Routine Tracker</h2>
-        
+        <h1 class="mb-4">Morning Routine Tracker</h1>
         <div class="row">
             <div class="col-md-8">
-                <div class="alert alert-info" id="routineStatus">
-                    Ready to start your routine
-                </div>
+                <div class="alert alert-info" id="routineStatus">Ready to start your routine</div>
                 
+                <!-- Timer Display -->
                 <div class="summary-box">
                     <div class="row">
-                        <div class="col-md-4">
-                            <strong>Date:</strong> <span id="currentDate"></span>
+                        <div class="col">
+                            <h5>Current Timer</h5>
+                            <div id="currentTimer" class="timer">00:00</div>
                         </div>
-                        <div class="col-md-4">
-                            <strong>Timer:</strong> <span id="currentTimer">00:00</span>
+                        <div class="col">
+                            <h5>Time to First Task</h5>
+                            <div id="timeToFirstTask" class="timer">00:00</div>
                         </div>
-                        <div class="col-md-4">
-                            <strong>First Task:</strong> <span id="timeToFirstTask">00:00</span>
+                        <div class="col text-center">
+                            <h5>Current Streak</h5>
+                            <div id="currentStreak" class="streak-count">0</div>
+                            <small>days</small>
+                        </div>
+                        <div class="col text-center">
+                            <h5>Avg. Completion</h5>
+                            <div id="completionRate">0%</div>
+                        </div>
+                        <div class="col text-center">
+                            <h5>Avg. Duration</h5>
+                            <div id="averageDuration">0</div>
+                            <small>minutes</small>
                         </div>
                     </div>
                 </div>
 
+                <!-- Timer Controls -->
                 <div class="btn-group mb-4">
-                    <button id="startRoutine" class="btn btn-primary">
-                        <i class="bi bi-play-fill"></i> Start Routine
-                    </button>
-                    <button id="pauseRoutine" class="btn btn-warning" disabled>
-                        <i class="bi bi-pause-fill"></i> Pause
-                    </button>
-                    <button id="resumeRoutine" class="btn btn-success" disabled>
-                        <i class="bi bi-play-fill"></i> Resume
-                    </button>
-                    <button id="completeRoutine" class="btn btn-success" disabled>
-                        <i class="bi bi-check-lg"></i> Complete
-                    </button>
+                    <button id="startRoutine" class="btn btn-primary">Start Routine</button>
+                    <button id="pauseRoutine" class="btn btn-warning" disabled>Pause</button>
+                    <button id="resumeRoutine" class="btn btn-success" disabled>Resume</button>
+                    <button id="completeRoutine" class="btn btn-success" disabled>Complete Routine</button>
                 </div>
 
+                <!-- Interruption Form -->
                 <div id="interruption-form" class="interruption-form">
                     <h5>Record Interruption</h5>
                     <div class="mb-3">
                         <label for="interruption-reason" class="form-label">What interrupted you?</label>
-                        <textarea id="interruption-reason" class="form-control" rows="2" placeholder="Describe what interrupted your routine..."></textarea>
+                        <textarea id="interruption-reason" class="form-control" rows="2"></textarea>
                     </div>
-                    <button id="save-interruption" class="btn btn-primary">Save Interruption</button>
+                    <button id="save-interruption" class="btn btn-warning">Save Interruption</button>
                 </div>
 
+                <!-- Tasks -->
+                <h4>Tasks for <span id="currentDate"></span></h4>
                 <div id="taskList"></div>
 
+                <!-- Add Task Form -->
                 <div class="input-group mt-3">
                     <input type="text" id="newTaskInput" class="form-control" placeholder="Add a new task...">
                     <button id="addTask" class="btn btn-outline-primary">Add Task</button>
                 </div>
-
-                <div class="interruptions-section mt-4">
-                    <h4>Interruptions</h4>
-                    <p class="text-muted">Select the type of interruption you experienced:</p>
-                    <div class="interruption-buttons">
-                        <button id="briefInterruption" class="btn btn-success btn-lg interruption-btn">
-                            <i class="bi bi-lightning-charge"></i>
-                            <span>30s Reset</span>
-                            <small class="d-block">Brief Interruption</small>
-                        </button>
-                        <button id="moderateInterruption" class="btn btn-warning btn-lg interruption-btn">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            <span>2m Reset</span>
-                            <small class="d-block">Moderate Interruption</small>
-                        </button>
-                        <button id="majorInterruption" class="btn btn-danger btn-lg interruption-btn">
-                            <i class="bi bi-stop-circle"></i>
-                            <span>5m Restart</span>
-                            <small class="d-block">Major Interruption</small>
-                        </button>
-                    </div>
-                </div>
             </div>
 
+            <!-- Chart -->
             <div class="col-md-4">
                 <div class="chart-container">
                     <h4>Compliance History</h4>
                     <canvas id="complianceChart"></canvas>
                 </div>
-                
-                <div class="interruption-history">
-                    <h4>Interruption History</h4>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Duration</th>
-                                <th>Reason</th>
-                            </tr>
-                        </thead>
-                        <tbody id="interruption-log">
-                            <tr>
-                                <td colspan="4">No interruptions logged yet</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
+        </div>
+
+        <!-- Interruption History -->
+        <div class="interruption-history mt-4">
+            <h4>Interruption History</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="interruption-log">
+                    <tr>
+                        <td colspan="4">No interruptions logged yet</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 

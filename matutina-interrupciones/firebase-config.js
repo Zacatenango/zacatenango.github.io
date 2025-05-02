@@ -1,3 +1,4 @@
+// Firebase configuration
 const config = {
     apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
     authDomain: "misaplicaciones-a39bb.firebaseapp.com",
@@ -9,14 +10,6 @@ const config = {
     measurementId: "G-NSZ17K1N89"
 };
 
-// Initialize Firebase
-function initializeFirebase() {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(config);
-    }
-    return firebase.database();
-}
-
 // Database reference paths
 const ROOT_PATH = 'matutina_interrupciones';
 const DB_REFS = {
@@ -25,5 +18,13 @@ const DB_REFS = {
     timerState: `${ROOT_PATH}/timer_state`,
     interruptions: `${ROOT_PATH}/interruptions`
 };
+
+// Initialize Firebase
+function initializeFirebase() {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+    }
+    return firebase.database();
+}
 
 export { initializeFirebase, DB_REFS };
