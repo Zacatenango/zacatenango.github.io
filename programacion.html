@@ -40,6 +40,32 @@
             border-radius: 4px;
             cursor: move;
             border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .todo-item.completed {
+            background: #f8f8f8;
+            color: #666;
+        }
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+        }
+        .todo-text {
+            flex-grow: 1;
+        }
+        .delete-task {
+            background: #ff4444;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .todo-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
         .timer-section {
             text-align: center;
@@ -188,21 +214,34 @@
                 const newTaskRef = database.ref('tasks').push();
                 newTaskRef.set({
                     text: taskText,
+                    completed: false,
                     order: Date.now()
                 });
                 taskInput.value = '';
             }
         }
 
+        function toggleTask(taskId, completed) {
+            database.ref(`tasks/${taskId}`).update({ completed });
+        }
+
+        function deleteTask(taskId) {
+            database.ref(`tasks/${taskId}`).remove();
+        }
+
         // Make tasks draggable
         function initDraggable() {
             $("#taskList").sortable({
+                handle: ".todo-text",
                 update: function(event, ui) {
                     const tasks = {};
                     $('#taskList .todo-item').each(function(index) {
                         const taskId = $(this).attr('data-id');
+                        const completed = $(this).find('.todo-checkbox').prop('checked');
+                        const text = $(this).find('.todo-text').text();
                         tasks[taskId] = {
-                            text: $(this).text(),
+                            text,
+                            completed,
                             order: index
                         };
                     });
@@ -231,9 +270,27 @@
                 .sort((a, b) => a[1].order - b[1].order)
                 .forEach(([id, task]) => {
                     const div = document.createElement('div');
-                    div.className = 'todo-item';
+                    div.className = `todo-item${task.completed ? ' completed' : ''}`;
                     div.setAttribute('data-id', id);
-                    div.textContent = task.text;
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'todo-checkbox';
+                    checkbox.checked = task.completed;
+                    checkbox.addEventListener('change', (e) => toggleTask(id, e.target.checked));
+
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'todo-text';
+                    textSpan.textContent = task.text;
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-task';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', () => deleteTask(id));
+
+                    div.appendChild(checkbox);
+                    div.appendChild(textSpan);
+                    div.appendChild(deleteBtn);
                     taskList.appendChild(div);
                 });
             
