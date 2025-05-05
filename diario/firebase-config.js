@@ -5,13 +5,14 @@ import { getDatabase } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-
 // Your web app's Firebase configuration
 const firebaseConfig = {
     // Replace these with your Firebase project config
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyArRfYoAEW946F9aIsnzht3PNoqSIc9k3Q",
+    authDomain: "misaplicaciones-a39bb.firebaseapp.com",
+    databaseURL: "https://misaplicaciones-a39bb-default-rtdb.firebaseio.com",
+    projectId: "misaplicaciones-a39bb",
+    storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
+    messagingSenderId: "375780546756",
+    appId: "1:375780546756:web:b044592b63f4490e69d191",
+    measurementId: "G-NVCCRVPFGJ"
 };
 
 // Initialize Firebase
