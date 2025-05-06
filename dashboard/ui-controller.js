@@ -5,12 +5,21 @@ class UIController {
     }
 
     initializeEventListeners() {
-        // Handle sidebar navigation
+        // Handle navigation for both desktop and mobile
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const sectionId = e.target.getAttribute('href').substring(1);
                 this.showSection(sectionId);
+                
+                // Close mobile menu after clicking
+                const navbarCollapse = document.getElementById('sidebarContent');
+                if (navbarCollapse.classList.contains('show')) {
+                    const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    }
+                }
             });
         });
 
@@ -19,7 +28,7 @@ class UIController {
     }
 
     showSection(sectionId) {
-        // Update active state in sidebar
+        // Update active state in both desktop and mobile navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
             if (link.getAttribute('href') === `#${sectionId}`) {
@@ -43,7 +52,7 @@ class UIController {
         }
     }
 
-    // Method to show error message
+    // Method to show error message 
     showError(containerId, message) {
         const container = document.getElementById(containerId);
         if (container) {

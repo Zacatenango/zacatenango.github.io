@@ -13,12 +13,47 @@
     <div class="wrapper">
         <!-- Header -->
         <header class="header">
-            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
                 <div class="container-fluid">
                     <a class="navbar-brand" href="#">Dashboard</a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarContent">
                         <span class="navbar-toggler-icon"></span>
                     </button>
+                    <div class="collapse navbar-collapse" id="sidebarContent">
+                        <!-- Navigation items for mobile -->
+                        <ul class="navbar-nav d-lg-none">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#current-task">
+                                    Current Task & Daily Activities
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#morning-routine">
+                                    Morning Routine
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#night-routine">
+                                    Night Routine
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#wake-up">
+                                    Wake Up Strategy
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#game-progress">
+                                    Videogame Progress Tracker
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#mental-health">
+                                    Mental Health Tracker
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </nav>
         </header>
@@ -26,8 +61,8 @@
         <!-- Sidebar and Content -->
         <div class="container-fluid">
             <div class="row">
-                <!-- Sidebar -->
-                <nav id="sidebar" class="col-md-3 col-lg-2 bg-light sidebar">
+                <!-- Sidebar - visible only on desktop -->
+                <nav id="sidebar" class="col-md-3 col-lg-2 d-none d-lg-block bg-light sidebar">
                     <div class="position-sticky pt-3">
                         <ul class="nav flex-column">
                             <li class="nav-item">
@@ -67,6 +102,9 @@
                 <!-- Main Content -->
                 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                     <div id="content">
+                        
+                        
+                        
                         <!-- Content sections will be loaded here -->
                         <div id="current-task" class="section">
                             <h2>Current Task & Daily Activities</h2>
@@ -122,6 +160,9 @@
                                 </div>
                             </div>
                         </div>
+
+
+
                         <div id="morning-routine" class="section">
                             <h2>Morning Routine</h2>
                             <div class="morning-routine-content">
