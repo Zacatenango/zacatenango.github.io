@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -11,8 +11,8 @@ const firebaseConfig = {
     projectId: "misaplicaciones-a39bb",
     storageBucket: "misaplicaciones-a39bb.firebasestorage.app",
     messagingSenderId: "375780546756",
-    appId: "1:375780546756:web:e00c3de48e1e0de769d191",
-    measurementId: "G-0X2BWZM5HS"
+    appId: "1:375780546756:web:b044592b63f4490e69d191",
+    measurementId: "G-NVCCRVPFGJ"
 };
 
 // Initialize Firebase
