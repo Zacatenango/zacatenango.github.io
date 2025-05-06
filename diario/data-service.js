@@ -13,10 +13,10 @@ export function saveActivity(activity, effort) {
 }
 
 export function loadActivitiesForDate(date, callback) {
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    // Create date with time set to local midnight
+    const [year, month, day] = date.split('-').map(num => parseInt(num, 10));
+    const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
 
     const activitiesRef = query(
         ref(db, 'activities'),
