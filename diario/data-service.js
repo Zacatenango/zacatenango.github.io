@@ -13,14 +13,16 @@ export function saveActivity(activity, effort) {
 }
 
 export function loadActivitiesForDate(date, callback) {
-    const startTime = new Date(date).getTime();
-    const endTime = startTime + 24 * 60 * 60 * 1000;
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
 
     const activitiesRef = query(
         ref(db, 'activities'),
         orderByChild('timestamp'),
-        startAt(startTime),
-        endAt(endTime)
+        startAt(startDate.getTime()),
+        endAt(endDate.getTime())
     );
 
     return onValue(activitiesRef, callback);

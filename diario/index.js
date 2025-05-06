@@ -6,28 +6,44 @@ import { updateChart } from './chart-controller.js';
 const today = setDateToToday();
 
 // Load initial data
-loadActivitiesForDate(today, (snapshot) => {
-    const activities = [];
-    snapshot.forEach((childSnapshot) => {
-        activities.push(childSnapshot.val());
+document.addEventListener('DOMContentLoaded', () => {
+    loadActivitiesForDate(today, (snapshot) => {
+        const activities = [];
+        snapshot.forEach((childSnapshot) => {
+            activities.push(childSnapshot.val());
+        });
+        updateActivitiesTable(activities);
     });
-    updateActivitiesTable(activities);
+
+    // Update chart with initial data
+    loadLastThirtyDaysStats(updateChart);
 });
 
-// Update chart with initial data
-loadLastThirtyDaysStats(updateChart);
-
 // Event Handlers
-$('#submitBtn').click(() => {
+$('#submitBtn').on('click', async () => {
     const { activity, effort } = getInputValues();
     
     if (validateInput(activity, effort)) {
-        saveActivity(activity, effort);
-        clearInputs();
+        try {
+            await saveActivity(activity, effort);
+            clearInputs();
+            // Reload activities for the current date
+            const currentDate = $('#dateSelector').val();
+            loadActivitiesForDate(currentDate, (snapshot) => {
+                const activities = [];
+                snapshot.forEach((childSnapshot) => {
+                    activities.push(childSnapshot.val());
+                });
+                updateActivitiesTable(activities);
+            });
+        } catch (error) {
+            console.error('Error saving activity:', error);
+            alert('Failed to save activity. Please try again.');
+        }
     }
 });
 
-$('#dateSelector').change(function() {
+$('#dateSelector').on('change', function() {
     const selectedDate = $(this).val();
     loadActivitiesForDate(selectedDate, (snapshot) => {
         const activities = [];
