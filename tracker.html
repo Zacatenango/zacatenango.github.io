@@ -689,31 +689,39 @@ const DEFAULT_DATA = {
 };
 
 // ─── CONFIG ───
-// To connect to AWS S3, replace these with your S3 bucket details:
-// const S3_BUCKET_URL = 'https://your-bucket.s3.amazonaws.com';
-// const S3_KEY = 'homework/gradient_methods_hw3.json';
-// For now, using localStorage as the storage backend.
+const S3_URL = 'https://shorts-chan.s3.us-east-1.amazonaws.com/tarea/tarea.json';
 
-const STORAGE_KEY = 'homework_quest_data';
-
-// ─── STATE ───
-let data;
-
-// ─── STORAGE (swap these functions for S3) ───
-function loadData() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    data = JSON.parse(saved);
-  } else {
-    data = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    saveData();
+async function loadData() {
+  try {
+    const res = await fetch(S3_URL);
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      throw new Error('S3 fetch failed');
+    }
+  } catch (e) {
+    // Fall back to localStorage
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      data = JSON.parse(saved);
+    } else {
+      data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
   }
+  // Always keep a local backup
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function saveData() {
+  // Save locally first (instant)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  // To save to S3, you'd do:
-  // fetch(`${S3_BUCKET_URL}/${S3_KEY}`, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
+
+  // Then sync to S3
+  fetch(S3_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).catch(err => console.warn('S3 save failed, data safe in localStorage:', err));
 }
 
 // ─── RENDERING ───
@@ -943,9 +951,11 @@ function closeCelebration() {
 }
 
 // ─── INIT ───
-loadData();
-render();
-setInterval(updateCountdown, 60000);
+(async () => {
+  await loadData();
+  render();
+  setInterval(updateCountdown, 60000);
+})();
 
 // ─── RESET (for dev) ───
 // To reset all progress, run in console: localStorage.removeItem('homework_quest_data'); location.reload();
