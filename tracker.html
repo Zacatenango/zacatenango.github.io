@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homework Quest — Gamification Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a1a;
+    --bg-card: #12122a;
+    --bg-card-hover: #1a1a3a;
+    --border: #2a2a4a;
+    --accent: #00ff88;
+    --accent-glow: rgba(0, 255, 136, 0.3);
+    --accent-dim: #00cc6a;
+    --xp-bar: #ff6b2b;
+    --xp-bar-glow: rgba(255, 107, 43, 0.4);
+    --milestone-gold: #ffd700;
+    --milestone-glow: rgba(255, 215, 0, 0.3);
+    --text-primary: #e8e8f0;
+    --text-secondary: #8888aa;
+    --text-muted: #555577;
+    --danger: #ff4466;
+    --completed-bg: rgba(0, 255, 136, 0.05);
+    --completed-border: rgba(0, 255, 136, 0.2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px 120px;
+    position: relative;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 32px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--xp-bar), var(--milestone-gold), var(--accent));
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .hw-label {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .hw-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 68, 102, 0.1);
+    border: 1px solid rgba(255, 68, 102, 0.2);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--danger);
+    font-weight: 600;
+  }
+
+  .countdown .icon { font-size: 16px; }
+
+  .countdown.safe {
+    background: rgba(0, 255, 136, 0.08);
+    border-color: rgba(0, 255, 136, 0.2);
+    color: var(--accent);
+  }
+
+  /* ─── STATS BAR ─── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 20px;
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent-glow);
+    margin-bottom: 6px;
+  }
+
+  .stat-value.xp { color: var(--xp-bar); text-shadow: 0 0 12px var(--xp-bar-glow); }
+  .stat-value.gold { color: var(--milestone-gold); text-shadow: 0 0 12px var(--milestone-glow); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .progress-section {
+    margin-bottom: 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .progress-pct {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 12px;
+    color: var(--xp-bar);
+    text-shadow: 0 0 8px var(--xp-bar-glow);
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--xp-bar), #ff8844);
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    min-width: 0;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    animation: progress-shine 2s ease-in-out infinite;
+  }
+
+  @keyframes progress-shine {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(200%); }
+  }
+
+  /* Milestone markers on progress bar */
+  .milestone-markers {
+    position: relative;
+    height: 16px;
+    margin-top: 6px;
+  }
+
+  .milestone-marker {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .milestone-marker .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+
+  .milestone-marker.unlocked .dot {
+    background: var(--milestone-gold);
+    box-shadow: 0 0 8px var(--milestone-glow);
+  }
+
+  .milestone-marker .label {
+    font-size: 9px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .milestone-marker.unlocked .label {
+    color: var(--milestone-gold);
+  }
+
+  /* ─── NEXT MILESTONE ─── */
+  .next-milestone {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(255, 215, 0, 0.05);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .next-milestone .trophy { font-size: 18px; }
+  .next-milestone strong { color: var(--milestone-gold); }
+
+  .all-unlocked {
+    color: var(--milestone-gold);
+    text-shadow: 0 0 8px var(--milestone-glow);
+    font-weight: 700;
+  }
+
+  /* ─── TASK LIST ─── */
+  .section-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 28px;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .task-item:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(0, 255, 136, 0.2);
+  }
+
+  .task-item.completed {
+    background: var(--completed-bg);
+    border-color: var(--completed-border);
+  }
+
+  .task-item.completed .task-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  .task-item.completed .task-points {
+    color: var(--accent-dim);
+  }
+
+  /* Checkbox */
+  .task-check {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--text-muted);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+
+  .task-item:hover .task-check { border-color: var(--accent); }
+
+  .task-item.completed .task-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-deep);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .task-name {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s;
+  }
+
+  .task-points {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 11px;
+    color: var(--xp-bar);
+    flex-shrink: 0;
+    text-shadow: 0 0 6px var(--xp-bar-glow);
+  }
+
+  /* Points popup animation */
+  .points-popup {
+    position: fixed;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px;
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent-glow);
+    pointer-events: none;
+    z-index: 999;
+    animation: popUp 1s ease-out forwards;
+  }
+
+  @keyframes popUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    60% { opacity: 1; transform: translateY(-40px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
+  }
+
+  /* ─── MILESTONES ─── */
+  .milestones-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .milestone-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.4s;
+  }
+
+  .milestone-card.unlocked {
+    background: rgba(255, 215, 0, 0.06);
+    border-color: rgba(255, 215, 0, 0.25);
+  }
+
+  .milestone-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    flex-shrink: 0;
+    filter: grayscale(1) opacity(0.4);
+    transition: all 0.4s;
+  }
+
+  .milestone-card.unlocked .milestone-icon {
+    filter: none;
+    background: rgba(255, 215, 0, 0.1);
+  }
+
+  .milestone-info { flex: 1; }
+
+  .milestone-reward {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.4s;
+  }
+
+  .milestone-card.unlocked .milestone-reward {
+    color: var(--milestone-gold);
+    text-shadow: 0 0 8px var(--milestone-glow);
+  }
+
+  .milestone-threshold {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .milestone-badge {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 8px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .milestone-card.unlocked .milestone-badge {
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--accent);
+  }
+
+  /* ─── CONFETTI ─── */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  /* ─── CELEBRATION OVERLAY ─── */
+  .celebration-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .celebration-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .celebration-box {
+    text-align: center;
+    padding: 40px;
+    background: var(--bg-card);
+    border: 2px solid var(--milestone-gold);
+    border-radius: 8px;
+    box-shadow: 0 0 60px var(--milestone-glow);
+    transform: scale(0.8);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .celebration-overlay.active .celebration-box {
+    transform: scale(1);
+  }
+
+  .celebration-emoji { font-size: 48px; margin-bottom: 16px; }
+
+  .celebration-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px;
+    color: var(--milestone-gold);
+    text-shadow: 0 0 20px var(--milestone-glow);
+    margin-bottom: 10px;
+  }
+
+  .celebration-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .celebration-btn {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    padding: 10px 24px;
+    background: var(--milestone-gold);
+    color: var(--bg-deep);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .celebration-btn:hover { transform: scale(1.05); }
+
+  /* ─── COMPLETION STATE ─── */
+  .all-complete-banner {
+    display: none;
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.08), rgba(255, 215, 0, 0.08));
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    border-radius: 4px;
+    margin-bottom: 24px;
+  }
+
+  .all-complete-banner.show { display: block; }
+
+  .all-complete-banner .emoji { font-size: 32px; margin-bottom: 8px; }
+
+  .all-complete-banner .text {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 12px;
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 520px) {
+    .stats-bar { grid-template-columns: 1fr; }
+    .hw-title { font-size: 14px; }
+    .container { padding: 16px 12px 120px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="hw-label">⚔️ QUEST ACTIVE</div>
+    <div class="hw-title" id="hwTitle">Loading...</div>
+    <div class="countdown safe" id="countdown">
+      <span class="icon">⏰</span>
+      <span id="countdownText">Calculating...</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-box">
+      <div class="stat-value xp" id="totalPoints">0</div>
+      <div class="stat-label">XP Earned</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="tasksCompleted">0</div>
+      <div class="stat-label">Quests Done</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value gold" id="milestonesUnlocked">0</div>
+      <div class="stat-label">Rewards</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-label">XP Progress</span>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="milestone-markers" id="milestoneMarkers"></div>
+    <div class="next-milestone" id="nextMilestone">
+      <span class="trophy">🏆</span>
+      <span>Loading...</span>
+    </div>
+  </div>
+
+  <!-- COMPLETION BANNER -->
+  <div class="all-complete-banner" id="completeBanner">
+    <div class="emoji">🎓✨</div>
+    <div class="text">ALL QUESTS COMPLETE!</div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="section-title">📋 Quest Log</div>
+  <div class="task-list" id="taskList"></div>
+
+  <!-- MILESTONES -->
+  <div class="section-title">🏆 Rewards</div>
+  <div class="milestones-grid" id="milestoneList"></div>
+</div>
+
+<!-- CELEBRATION OVERLAY -->
+<div class="celebration-overlay" id="celebrationOverlay">
+  <div class="celebration-box">
+    <div class="celebration-emoji" id="celebEmoji">🎉</div>
+    <div class="celebration-title" id="celebTitle">MILESTONE UNLOCKED!</div>
+    <div class="celebration-desc" id="celebDesc"></div>
+    <button class="celebration-btn" onclick="closeCelebration()">NICE!</button>
+  </div>
+</div>
+
+<script>
+// ─── DEFAULT DATA ───
+const DEFAULT_DATA = {
+  homework_id: "gradient_methods_hw3",
+  title: "Gradient Methods — HW3",
+  deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+  tasks: [
+    { id: 1, name: "Problem 1: Critical points of f(x,y)", points: 25, completed: false },
+    { id: 2, name: "Problem 2: Gradient descent implementation", points: 30, completed: false },
+    { id: 3, name: "Problem 3: Convergence rate proof", points: 20, completed: false },
+    { id: 4, name: "Problem 4: Stochastic gradient descent", points: 30, completed: false },
+    { id: 5, name: "Problem 5: Learning rate schedules", points: 25, completed: false },
+    { id: 6, name: "Problem 6: Momentum & Nesterov", points: 25, completed: false },
+    { id: 7, name: "Problem 7: Adam optimizer analysis", points: 20, completed: false },
+    { id: 8, name: "Problem 8: Saddle point escape", points: 25, completed: false },
+    { id: 9, name: "Problem 9: Numerical experiments", points: 30, completed: false },
+    { id: 10, name: "Problem 10: Write-up & figures", points: 20, completed: false }
+  ],
+  total_points: 0,
+  milestones: [
+    { threshold: 50, reward: "☕ Coffee break", unlocked: false },
+    { threshold: 100, reward: "🍺 Beer break", unlocked: false },
+    { threshold: 150, reward: "🎮 Gaming session", unlocked: false },
+    { threshold: 200, reward: "🍕 Pizza reward", unlocked: false },
+    { threshold: 250, reward: "🎬 Movie night", unlocked: false }
+  ]
+};
+
+// ─── CONFIG ───
+// To connect to AWS S3, replace these with your S3 bucket details:
+// const S3_BUCKET_URL = 'https://your-bucket.s3.amazonaws.com';
+// const S3_KEY = 'homework/gradient_methods_hw3.json';
+// For now, using localStorage as the storage backend.
+
+const STORAGE_KEY = 'homework_quest_data';
+
+// ─── STATE ───
+let data;
+
+// ─── STORAGE (swap these functions for S3) ───
+function loadData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    data = JSON.parse(saved);
+  } else {
+    data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    saveData();
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // To save to S3, you'd do:
+  // fetch(`${S3_BUCKET_URL}/${S3_KEY}`, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
+}
+
+// ─── RENDERING ───
+function render() {
+  const maxPoints = data.tasks.reduce((s, t) => s + t.points, 0);
+  const earned = data.tasks.filter(t => t.completed).reduce((s, t) => s + t.points, 0);
+  const completedCount = data.tasks.filter(t => t.completed).length;
+  const pct = maxPoints > 0 ? Math.round((earned / maxPoints) * 100) : 0;
+  data.total_points = earned;
+
+  // Header
+  document.getElementById('hwTitle').textContent = data.title || data.homework_id;
+
+  // Countdown
+  updateCountdown();
+
+  // Stats
+  document.getElementById('totalPoints').textContent = earned;
+  document.getElementById('tasksCompleted').textContent = `${completedCount}/${data.tasks.length}`;
+  document.getElementById('milestonesUnlocked').textContent = data.milestones.filter(m => m.unlocked).length;
+
+  // Progress
+  document.getElementById('progressPct').textContent = `${pct}%`;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+
+  // Milestone markers on progress bar
+  const markersEl = document.getElementById('milestoneMarkers');
+  markersEl.innerHTML = '';
+  data.milestones.forEach(m => {
+    const pos = Math.min((m.threshold / maxPoints) * 100, 100);
+    const marker = document.createElement('div');
+    marker.className = `milestone-marker${m.unlocked ? ' unlocked' : ''}`;
+    marker.style.left = `${pos}%`;
+    marker.innerHTML = `<div class="dot"></div><div class="label">${m.threshold}</div>`;
+    markersEl.appendChild(marker);
+  });
+
+  // Next milestone
+  const nextMS = data.milestones.find(m => !m.unlocked);
+  const nextEl = document.getElementById('nextMilestone');
+  if (nextMS) {
+    const remaining = nextMS.threshold - earned;
+    nextEl.innerHTML = `<span class="trophy">🏆</span><span>Next reward: <strong>${nextMS.reward}</strong> — ${remaining > 0 ? remaining + ' XP to go' : 'Ready!'}</span>`;
+  } else {
+    nextEl.innerHTML = `<span class="trophy">🏆</span><span class="all-unlocked">All rewards unlocked!</span>`;
+  }
+
+  // Tasks
+  const taskList = document.getElementById('taskList');
+  taskList.innerHTML = '';
+  data.tasks.forEach(task => {
+    const el = document.createElement('div');
+    el.className = `task-item${task.completed ? ' completed' : ''}`;
+    el.innerHTML = `
+      <div class="task-check">${task.completed ? '✓' : ''}</div>
+      <div class="task-name">${task.name}</div>
+      <div class="task-points">+${task.points} XP</div>
+    `;
+    el.addEventListener('click', (e) => toggleTask(task.id, e));
+    taskList.appendChild(el);
+  });
+
+  // Milestones
+  const milestoneList = document.getElementById('milestoneList');
+  milestoneList.innerHTML = '';
+  const icons = ['☕', '🍺', '🎮', '🍕', '🎬', '🎁', '💎', '👑'];
+  data.milestones.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = `milestone-card${m.unlocked ? ' unlocked' : ''}`;
+    card.innerHTML = `
+      <div class="milestone-icon">${m.reward.split(' ')[0] || icons[i % icons.length]}</div>
+      <div class="milestone-info">
+        <div class="milestone-reward">${m.reward}</div>
+        <div class="milestone-threshold">${m.threshold} XP required</div>
+      </div>
+      <div class="milestone-badge">${m.unlocked ? 'UNLOCKED' : 'LOCKED'}</div>
+    `;
+    milestoneList.appendChild(card);
+  });
+
+  // Completion banner
+  document.getElementById('completeBanner').className = 
+    `all-complete-banner${completedCount === data.tasks.length ? ' show' : ''}`;
+}
+
+function toggleTask(taskId, event) {
+  const task = data.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const wasCompleted = task.completed;
+  task.completed = !task.completed;
+
+  // Check milestones before save
+  const earned = data.tasks.filter(t => t.completed).reduce((s, t) => s + t.points, 0);
+  let newlyUnlocked = null;
+
+  if (!wasCompleted) {
+    // Just completed — check milestones
+    data.milestones.forEach(m => {
+      if (!m.unlocked && earned >= m.threshold) {
+        m.unlocked = true;
+        newlyUnlocked = m;
+      }
+    });
+
+    // Points popup
+    showPointsPopup(event, `+${task.points}`);
+  } else {
+    // Unchecked — re-lock milestones above current total
+    data.milestones.forEach(m => {
+      if (earned < m.threshold) m.unlocked = false;
+    });
+  }
+
+  saveData();
+  render();
+
+  if (newlyUnlocked) {
+    setTimeout(() => celebrate(newlyUnlocked), 350);
+  }
+}
+
+// ─── COUNTDOWN ───
+function updateCountdown() {
+  const el = document.getElementById('countdown');
+  const textEl = document.getElementById('countdownText');
+  if (!data.deadline) {
+    textEl.textContent = 'No deadline set';
+    el.className = 'countdown safe';
+    return;
+  }
+
+  const now = new Date();
+  const deadline = new Date(data.deadline);
+  const diff = deadline - now;
+
+  if (diff <= 0) {
+    textEl.textContent = 'DEADLINE PASSED';
+    el.className = 'countdown';
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+  let text = '';
+  if (days > 0) text += `${days}d `;
+  text += `${hours}h ${minutes}m remaining`;
+  textEl.textContent = text;
+
+  el.className = days < 1 ? 'countdown' : 'countdown safe';
+}
+
+// ─── FX: POINTS POPUP ───
+function showPointsPopup(event, text) {
+  const popup = document.createElement('div');
+  popup.className = 'points-popup';
+  popup.textContent = text;
+  popup.style.left = `${event.clientX}px`;
+  popup.style.top = `${event.clientY - 20}px`;
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 1000);
+}
+
+// ─── FX: CONFETTI ───
+function spawnConfetti(count = 60) {
+  const colors = ['#00ff88', '#ff6b2b', '#ffd700', '#ff4466', '#44aaff', '#ff44cc'];
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.top = '-10px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.width = `${6 + Math.random() * 8}px`;
+    piece.style.height = `${6 + Math.random() * 8}px`;
+
+    const duration = 1.5 + Math.random() * 2;
+    const xDrift = (Math.random() - 0.5) * 200;
+    const rotation = Math.random() * 720;
+
+    piece.animate([
+      { transform: `translateY(0) translateX(0) rotate(0deg)`, opacity: 1 },
+      { transform: `translateY(100vh) translateX(${xDrift}px) rotate(${rotation}deg)`, opacity: 0 }
+    ], {
+      duration: duration * 1000,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      delay: Math.random() * 400
+    });
+
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), (duration + 0.5) * 1000);
+  }
+}
+
+// ─── FX: CELEBRATION ───
+function celebrate(milestone) {
+  spawnConfetti(80);
+  const overlay = document.getElementById('celebrationOverlay');
+  document.getElementById('celebEmoji').textContent = milestone.reward.split(' ')[0] || '🎉';
+  document.getElementById('celebTitle').textContent = 'REWARD UNLOCKED!';
+  document.getElementById('celebDesc').textContent = `${milestone.reward} — You earned ${milestone.threshold} XP!`;
+  overlay.classList.add('active');
+
+  // Try to play a short beep sound
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+    });
+  } catch (e) {}
+}
+
+function closeCelebration() {
+  document.getElementById('celebrationOverlay').classList.remove('active');
+}
+
+// ─── INIT ───
+loadData();
+render();
+setInterval(updateCountdown, 60000);
+
+// ─── RESET (for dev) ───
+// To reset all progress, run in console: localStorage.removeItem('homework_quest_data'); location.reload();
+</script>
+</body>
+</html>
