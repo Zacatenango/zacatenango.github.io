@@ -645,6 +645,79 @@
       font-size: 0.84rem;
     }
 
+    .json-dialog {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+      color: var(--text);
+      font-family: var(--body-font);
+      max-width: min(860px, 94vw);
+      width: 100%;
+      padding: 0;
+      margin: auto;
+    }
+
+    .json-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+    }
+
+    .json-dialog-inner {
+      display: grid;
+      gap: 0;
+    }
+
+    .json-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .json-dialog-header h2 {
+      margin: 0;
+      font-family: var(--display-font);
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .json-editor {
+      width: 100%;
+      min-height: 360px;
+      max-height: 60vh;
+      background: color-mix(in srgb, var(--bg) 70%, transparent);
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      padding: 16px 18px;
+      resize: vertical;
+      outline: 0;
+      box-sizing: border-box;
+    }
+
+    .json-dialog-error {
+      padding: 10px 18px;
+      font-size: 0.84rem;
+      color: var(--accent-2);
+      min-height: 2.4em;
+    }
+
+    .json-dialog-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding: 12px 18px 16px;
+      flex-wrap: wrap;
+    }
+
     [data-theme="hacker"] .row-prefix::after,
     [data-theme="hacker"] .focus-title::after {
       content: '_';
@@ -734,7 +807,23 @@
     <div class="actions">
       <button id="newWeekBtn" class="action-btn primary" type="button">New Week</button>
       <button id="archiveBtn" class="action-btn" type="button">Archive</button>
+      <button id="editJsonBtn" class="action-btn" type="button">Edit JSON</button>
     </div>
+
+    <dialog class="json-dialog" id="jsonDialog" aria-label="Edit raw JSON data">
+      <div class="json-dialog-inner">
+        <div class="json-dialog-header">
+          <h2>Raw JSON Editor</h2>
+          <button type="button" class="ghost-hit" id="jsonDialogClose" aria-label="Close dialog">×</button>
+        </div>
+        <textarea class="json-editor" id="jsonEditor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+        <div class="json-dialog-error" id="jsonDialogError" role="alert" aria-live="polite"></div>
+        <div class="json-dialog-footer">
+          <button type="button" class="action-btn" id="jsonDialogCancel">Cancel</button>
+          <button type="button" class="action-btn primary" id="jsonDialogApply">Apply &amp; Save</button>
+        </div>
+      </div>
+    </dialog>
 
     <section id="archiveSection" class="card archive-card" hidden>
       <div class="card-heading">Archive</div>
@@ -1322,6 +1411,58 @@
         renderArchive();
         if (state.isArchiveVisible) {
           document.getElementById('archiveSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+
+      const jsonDialog = document.getElementById('jsonDialog');
+      const jsonEditor = document.getElementById('jsonEditor');
+      const jsonDialogError = document.getElementById('jsonDialogError');
+
+      function openJsonDialog() {
+        jsonEditor.value = JSON.stringify(state.data, null, 2);
+        jsonDialogError.textContent = '';
+        jsonDialog.showModal();
+        jsonEditor.focus();
+      }
+
+      function closeJsonDialog() {
+        jsonDialog.close();
+      }
+
+      function applyJsonEdit() {
+        let parsed;
+        try {
+          parsed = JSON.parse(jsonEditor.value);
+        } catch (err) {
+          jsonDialogError.textContent = `JSON parse error: ${err.message}`;
+          return;
+        }
+        try {
+          state.data = normalizeData(parsed);
+        } catch (err) {
+          jsonDialogError.textContent = `Normalization error: ${err.message}`;
+          return;
+        }
+        closeJsonDialog();
+        render();
+        scheduleSave();
+      }
+
+      document.getElementById('editJsonBtn').addEventListener('click', openJsonDialog);
+      document.getElementById('jsonDialogClose').addEventListener('click', closeJsonDialog);
+      document.getElementById('jsonDialogCancel').addEventListener('click', closeJsonDialog);
+      document.getElementById('jsonDialogApply').addEventListener('click', applyJsonEdit);
+
+      jsonDialog.addEventListener('click', event => {
+        if (event.target === jsonDialog) {
+          closeJsonDialog();
+        }
+      });
+
+      jsonDialog.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeJsonDialog();
         }
       });
     }
