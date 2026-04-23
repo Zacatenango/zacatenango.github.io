@@ -120,37 +120,49 @@
     }
 
     [data-theme="frieren"] {
-      --bg: #f5f0e8;
-      --bg-alt: #eae1d2;
-      --panel: rgba(255, 251, 243, 0.9);
-      --panel-strong: rgba(249, 243, 232, 0.96);
-      --border: rgba(122, 158, 126, 0.34);
-      --text: #2d1b4e;
-      --muted: #6f6282;
-      --accent: #7a9e7e;
-      --accent-2: #c9a84c;
-      --accent-3: #5d4a85;
-      --success: #7a9e7e;
+      --bg: #1c110a;
+      --bg-alt: #261708;
+      --panel: rgba(40, 24, 10, 0.88);
+      --panel-strong: rgba(22, 12, 5, 0.95);
+      --border: rgba(185, 138, 75, 0.30);
+      --text: #efe4c8;
+      --muted: #a8845a;
+      --accent: #d4961e;
+      --accent-2: #7a3020;
+      --accent-3: #f7e9ca;
+      --success: #8cbd6a;
       --display-font: 'Cormorant Garamond', serif;
       --body-font: 'IM Fell English', serif;
-      --line-pattern: radial-gradient(circle at 20% 20%, rgba(201, 168, 76, 0.12), transparent 26%), radial-gradient(circle at 80% 0%, rgba(122, 158, 126, 0.12), transparent 22%);
+      --line-pattern: repeating-linear-gradient(
+        0deg,
+        rgba(185, 138, 75, 0.07),
+        rgba(185, 138, 75, 0.07) 1px,
+        transparent 1px,
+        transparent 8px
+      );
     }
 
     [data-theme="math"] {
-      --bg: #f8f8f8;
-      --bg-alt: #edf2f7;
-      --panel: rgba(255, 255, 255, 0.9);
-      --panel-strong: rgba(255, 255, 255, 0.97);
-      --border: rgba(26, 26, 46, 0.16);
-      --text: #1a1a2e;
-      --muted: #5d6478;
-      --accent: #33ff66;
-      --accent-2: #ff6b35;
-      --accent-3: #243b6b;
-      --success: #1ebd53;
+      --bg: #0d1610;
+      --bg-alt: #141e14;
+      --panel: rgba(18, 28, 18, 0.90);
+      --panel-strong: rgba(10, 16, 10, 0.96);
+      --border: rgba(240, 235, 200, 0.18);
+      --text: #f0ece0;
+      --muted: #a8b090;
+      --accent: #e8d470;
+      --accent-2: #c07840;
+      --accent-3: #ffffff;
+      --success: #88c668;
       --display-font: 'STIX Two Text', serif;
       --body-font: 'JetBrains Mono', monospace;
-      --line-pattern: linear-gradient(rgba(26, 26, 46, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(26, 26, 46, 0.05) 1px, transparent 1px);
+      --line-pattern: repeating-linear-gradient(
+        0deg,
+        rgba(240, 235, 200, 0.06),
+        rgba(240, 235, 200, 0.06) 1px,
+        transparent 1px,
+        transparent 32px
+      );
     }
 
     [data-theme="mecha"] {
@@ -746,8 +758,8 @@
       { key: 'esports', label: 'E-Sports', icon: '✦', dotA: '#c89b3c', dotB: '#ff4655' },
       { key: 'hacker', label: 'L337 H4XX0R', icon: '>_', dotA: '#00ff41', dotB: '#ffb000' },
       { key: 'racing', label: 'Racing', icon: '▣', dotA: '#e8000d', dotB: '#ffd700' },
-      { key: 'frieren', label: 'Frieren', icon: '✧', dotA: '#7a9e7e', dotB: '#c9a84c' },
-      { key: 'math', label: 'Math', icon: '∿', dotA: '#33ff66', dotB: '#ff6b35' },
+      { key: 'frieren', label: 'Frieren', icon: '✧', dotA: '#d4961e', dotB: '#7a3020' },
+      { key: 'math', label: 'Math', icon: '∿', dotA: '#e8d470', dotB: '#c07840' },
       { key: 'mecha', label: 'Mecha', icon: '◎', dotA: '#ff2d78', dotB: '#00a8ff' }
     ];
     const CATEGORY_CONFIG = [
