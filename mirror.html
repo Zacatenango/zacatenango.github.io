@@ -739,7 +739,7 @@
     const FRESH_ANIMATION_DURATION_MS = 1200;
     // Personal-use option: point this at a controlled bucket endpoint or presigned URL.
     // Do not expose a publicly writable bucket; browser PUT access should stay limited.
-    const S3_URL = 'https://example.com/replace-with-your-s3-or-presigned-url';
+    const S3_URL = '';
     const STORAGE_KEY = 'mirror-productivity-data';
     const THEMES = [
       { key: 'brs', label: 'Black Rock Shooter', icon: '★', dotA: '#00d4d4', dotB: '#cc2244' },
@@ -863,7 +863,7 @@
     }
 
     function isS3Configured() {
-      return !S3_URL.includes('replace-with-your-s3-or-presigned-url');
+      return Boolean(S3_URL && S3_URL.trim());
     }
 
     async function loadData() {
@@ -970,18 +970,22 @@
       const currentWeek = new Date(getWeekStartIso(new Date()) + 'T00:00:00');
       const deltaDays = Math.round((currentWeek - storedWeek) / 86400000);
       const day = new Date().getDay();
+      const messages = [];
 
-      let message = '';
-      if (deltaDays >= 7) {
-        message = '<strong>Soft prompt:</strong> This week is older than 7 days. Archive it or start fresh.';
-      } else if (day === 0) {
-        message = '<strong>Sunday evening:</strong> New week. What are the 3 things that matter for business, school, and personal?';
-      } else if (day === 5) {
-        message = '<strong>Friday evening:</strong> Week done. What moved? Archive it.';
+      if (!isS3Configured()) {
+        messages.push('<strong>Sync setup:</strong> S3 is not configured yet, so changes are saving only in this browser. When you add an endpoint, use a personal bucket or presigned URL and allow CORS from the hosting domain.');
       }
 
-      promptEl.hidden = !message;
-      promptEl.innerHTML = message;
+      if (deltaDays >= 7) {
+        messages.push('<strong>Soft prompt:</strong> This week is older than 7 days. Archive it or start fresh.');
+      } else if (day === 0) {
+        messages.push('<strong>Sunday evening:</strong> New week. What are the 3 things that matter for business, school, and personal?');
+      } else if (day === 5) {
+        messages.push('<strong>Friday evening:</strong> Week done. What moved? Archive it.');
+      }
+
+      promptEl.hidden = messages.length === 0;
+      promptEl.innerHTML = messages.join('<br><br>');
     }
 
     function renderOneThing() {
