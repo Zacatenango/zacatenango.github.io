@@ -732,9 +732,14 @@
   </div>
 
   <script>
+    const MAX_FOCUS_LENGTH = 140;
+    const MAX_ONE_THING_LENGTH = 180;
+    const MAX_DONE_LENGTH = 140;
+    const MAX_NOTES_LENGTH = 1000;
+    const FRESH_ANIMATION_DURATION_MS = 1200;
     // Personal-use option: point this at a controlled bucket endpoint or presigned URL.
     // Do not expose a publicly writable bucket; browser PUT access should stay limited.
-    const S3_URL = 'https://your-bucket.s3.amazonaws.com/productivity-data.json';
+    const S3_URL = 'https://example.com/replace-with-your-s3-or-presigned-url';
     const STORAGE_KEY = 'mirror-productivity-data';
     const THEMES = [
       { key: 'brs', label: 'Black Rock Shooter', icon: '★', dotA: '#00d4d4', dotB: '#cc2244' },
@@ -857,8 +862,12 @@
       el.className = `sync-indicator ${tone}`.trim();
     }
 
+    function isS3Configured() {
+      return !S3_URL.includes('replace-with-your-s3-or-presigned-url');
+    }
+
     async function loadData() {
-      const bucketConfigured = !S3_URL.includes('your-bucket');
+      const bucketConfigured = isS3Configured();
       const localBackup = localStorage.getItem(STORAGE_KEY);
 
       if (bucketConfigured) {
@@ -889,7 +898,7 @@
 
     async function persistData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      const bucketConfigured = !S3_URL.includes('your-bucket');
+      const bucketConfigured = isS3Configured();
 
       if (!bucketConfigured) {
         setSyncStatus('Saved locally — configure S3_URL for sync');
@@ -1019,7 +1028,7 @@
           input.value = value;
           input.addEventListener('click', event => event.stopPropagation());
           input.addEventListener('input', event => {
-            state.data.week.focus[category.key][index] = event.target.value.slice(0, 140);
+            state.data.week.focus[category.key][index] = event.target.value.slice(0, MAX_FOCUS_LENGTH);
             scheduleSave();
           });
 
@@ -1068,7 +1077,7 @@
         const isFresh = state.latestDone
           && index === 0
           && entry === state.latestDone.text
-          && (Date.now() - state.latestDone.time) < 1200;
+          && (Date.now() - state.latestDone.time) < FRESH_ANIMATION_DURATION_MS;
 
         row.className = `done-item${isFresh ? ' fresh' : ''}`;
         row.innerHTML = `<span class="done-mark">${document.documentElement.getAttribute('data-theme') === 'hacker' ? '[OK]' : '✓'}</span>`;
@@ -1078,7 +1087,7 @@
         input.className = 'text-input';
         input.value = entry;
         input.addEventListener('input', event => {
-          state.data.today.done[index] = event.target.value.slice(0, 140);
+          state.data.today.done[index] = event.target.value.slice(0, MAX_DONE_LENGTH);
           scheduleSave();
         });
 
@@ -1165,7 +1174,7 @@
     }
 
     function queueDoneEntry(text) {
-      const trimmed = text.trim();
+      const trimmed = text.trim().slice(0, MAX_DONE_LENGTH);
       if (!trimmed) {
         return;
       }
@@ -1269,7 +1278,7 @@
 
     function bindStaticEvents() {
       document.getElementById('oneThingInput').addEventListener('input', event => {
-        state.data.today.one_thing = event.target.value.slice(0, 180);
+        state.data.today.one_thing = event.target.value.slice(0, MAX_ONE_THING_LENGTH);
         scheduleSave();
       });
 
@@ -1287,7 +1296,7 @@
       });
 
       document.getElementById('notesInput').addEventListener('input', event => {
-        state.data.today.notes = event.target.value.slice(0, 1000);
+        state.data.today.notes = event.target.value.slice(0, MAX_NOTES_LENGTH);
         scheduleSave();
       });
 
