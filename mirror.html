@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIRROR — Personal Productivity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Bebas+Neue&family=Cormorant+Garamond:wght@500;600;700&family=Exo+2:wght@400;600;700;800&family=IM+Fell+English:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Michroma&family=Nunito:wght@400;600;700&family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;700&family=STIX+Two+Text:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+  <script>
+    document.documentElement.setAttribute(
+      'data-theme',
+      localStorage.getItem('mirror-preferred-theme') || 'brs'
+    );
+  </script>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-alt: #11131a;
+      --panel: rgba(16, 20, 30, 0.86);
+      --panel-strong: rgba(8, 11, 18, 0.94);
+      --border: rgba(0, 212, 212, 0.28);
+      --text: #e8f0f0;
+      --muted: #90a2ad;
+      --accent: #00d4d4;
+      --accent-2: #cc2244;
+      --accent-3: #6cf3ff;
+      --success: #87ffe7;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+      --display-font: 'Orbitron', 'Rajdhani', sans-serif;
+      --body-font: 'Share Tech Mono', monospace;
+      --radius: 20px;
+      --line-pattern: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.03),
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    }
+
+    [data-theme="brs"] {
+      --bg: #0a0a0f;
+      --bg-alt: #11131a;
+      --panel: rgba(16, 20, 30, 0.86);
+      --panel-strong: rgba(8, 11, 18, 0.94);
+      --border: rgba(0, 212, 212, 0.28);
+      --text: #e8f0f0;
+      --muted: #90a2ad;
+      --accent: #00d4d4;
+      --accent-2: #cc2244;
+      --accent-3: #6cf3ff;
+      --success: #87ffe7;
+      --display-font: 'Orbitron', 'Rajdhani', sans-serif;
+      --body-font: 'Share Tech Mono', monospace;
+      --line-pattern: repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px,
+        transparent 9px
+      );
+    }
+
+    [data-theme="esports"] {
+      --bg: #0f1923;
+      --bg-alt: #182633;
+      --panel: rgba(12, 19, 27, 0.88);
+      --panel-strong: rgba(8, 13, 19, 0.95);
+      --border: rgba(200, 155, 60, 0.3);
+      --text: #e8e0d0;
+      --muted: #b4ac9f;
+      --accent: #c89b3c;
+      --accent-2: #ff4655;
+      --accent-3: #fff4ca;
+      --success: #f7d774;
+      --display-font: 'Bebas Neue', sans-serif;
+      --body-font: 'Barlow Condensed', sans-serif;
+      --line-pattern: linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    }
+
+    [data-theme="hacker"] {
+      --bg: #0d0d0d;
+      --bg-alt: #111811;
+      --panel: rgba(5, 15, 5, 0.9);
+      --panel-strong: rgba(3, 10, 3, 0.96);
+      --border: rgba(0, 255, 65, 0.28);
+      --text: #7fff9c;
+      --muted: #3eb95a;
+      --accent: #00ff41;
+      --accent-2: #ffb000;
+      --accent-3: #d8ffd8;
+      --success: #00ff41;
+      --display-font: 'VT323', 'Share Tech Mono', monospace;
+      --body-font: 'VT323', 'Share Tech Mono', monospace;
+      --line-pattern: repeating-linear-gradient(
+        0deg,
+        rgba(0, 255, 65, 0.08),
+        rgba(0, 255, 65, 0.08) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+
+    [data-theme="racing"] {
+      --bg: #111111;
+      --bg-alt: #1b1b1b;
+      --panel: rgba(19, 19, 19, 0.88);
+      --panel-strong: rgba(9, 9, 9, 0.95);
+      --border: rgba(255, 215, 0, 0.22);
+      --text: #f2f2f2;
+      --muted: #c0c0c0;
+      --accent: #e8000d;
+      --accent-2: #ffd700;
+      --accent-3: #ffffff;
+      --success: #ffd700;
+      --display-font: 'Michroma', sans-serif;
+      --body-font: 'Exo 2', sans-serif;
+      --line-pattern: linear-gradient(135deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.03) 75%, transparent 75%, transparent);
+    }
+
+    [data-theme="frieren"] {
+      --bg: #f5f0e8;
+      --bg-alt: #eae1d2;
+      --panel: rgba(255, 251, 243, 0.9);
+      --panel-strong: rgba(249, 243, 232, 0.96);
+      --border: rgba(122, 158, 126, 0.34);
+      --text: #2d1b4e;
+      --muted: #6f6282;
+      --accent: #7a9e7e;
+      --accent-2: #c9a84c;
+      --accent-3: #5d4a85;
+      --success: #7a9e7e;
+      --display-font: 'Cormorant Garamond', serif;
+      --body-font: 'IM Fell English', serif;
+      --line-pattern: radial-gradient(circle at 20% 20%, rgba(201, 168, 76, 0.12), transparent 26%), radial-gradient(circle at 80% 0%, rgba(122, 158, 126, 0.12), transparent 22%);
+    }
+
+    [data-theme="math"] {
+      --bg: #f8f8f8;
+      --bg-alt: #edf2f7;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-strong: rgba(255, 255, 255, 0.97);
+      --border: rgba(26, 26, 46, 0.16);
+      --text: #1a1a2e;
+      --muted: #5d6478;
+      --accent: #33ff66;
+      --accent-2: #ff6b35;
+      --accent-3: #243b6b;
+      --success: #1ebd53;
+      --display-font: 'STIX Two Text', serif;
+      --body-font: 'JetBrains Mono', monospace;
+      --line-pattern: linear-gradient(rgba(26, 26, 46, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(26, 26, 46, 0.05) 1px, transparent 1px);
+    }
+
+    [data-theme="mecha"] {
+      --bg: #eef3fb;
+      --bg-alt: #dce6f4;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: rgba(246, 249, 255, 0.96);
+      --border: rgba(0, 168, 255, 0.22);
+      --text: #24314d;
+      --muted: #62728e;
+      --accent: #ff2d78;
+      --accent-2: #00a8ff;
+      --accent-3: #ffffff;
+      --success: #00a8ff;
+      --display-font: 'Exo 2', sans-serif;
+      --body-font: 'Nunito', sans-serif;
+      --line-pattern: linear-gradient(90deg, rgba(0,168,255,0.06) 1px, transparent 1px), linear-gradient(rgba(255,45,120,0.06) 1px, transparent 1px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--body-font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--accent) 18%, transparent), transparent 36%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 32%),
+        linear-gradient(180deg, var(--bg), var(--bg-alt));
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background-image: var(--line-pattern);
+      background-size: 20px 20px;
+      opacity: 0.4;
+    }
+
+    body::after {
+      background:
+        linear-gradient(transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+      opacity: 0.16;
+      mix-blend-mode: screen;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .theme-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .theme-pill {
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      cursor: pointer;
+      transition: 180ms ease;
+      font: inherit;
+    }
+
+    .theme-pill:hover,
+    .theme-pill.active {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 68%, white);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .theme-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--dot-a), var(--dot-b));
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .meta-panel {
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+    }
+
+    .week-label,
+    .sync-indicator {
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+    }
+
+    .week-label {
+      font-family: var(--display-font);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.92rem;
+    }
+
+    .sync-indicator {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .sync-indicator.good {
+      color: var(--success);
+    }
+
+    .sync-indicator.warn {
+      color: var(--accent-2);
+    }
+
+    .banner {
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--panel-strong) 96%, transparent));
+      box-shadow: var(--shadow);
+    }
+
+    .banner strong {
+      font-family: var(--display-font);
+      letter-spacing: 0.08em;
+    }
+
+    .card {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 92%, transparent), color-mix(in srgb, var(--panel) 96%, transparent));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at right top, color-mix(in srgb, var(--accent) 18%, transparent), transparent 34%);
+      pointer-events: none;
+    }
+
+    .card-label,
+    .card-heading {
+      font-family: var(--display-font);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .one-thing-row,
+    .done-entry {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .interactive-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+      background: color-mix(in srgb, var(--bg) 50%, transparent);
+      transition: 180ms ease;
+    }
+
+    .interactive-row:hover {
+      border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+      transform: translateY(-1px);
+    }
+
+    .row-prefix {
+      font-size: 1.2rem;
+      color: var(--accent);
+      font-family: var(--display-font);
+    }
+
+    .text-input,
+    .notes-input {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      font: inherit;
+      padding: 0;
+    }
+
+    .text-input::placeholder,
+    .notes-input::placeholder {
+      color: var(--muted);
+    }
+
+    .one-thing-input {
+      font-size: 1.08rem;
+    }
+
+    .focus-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .focus-card {
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .focus-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .focus-title {
+      font-family: var(--display-font);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 1rem;
+    }
+
+    .focus-cap {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .focus-list,
+    .done-list,
+    .archive-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .focus-item,
+    .done-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+      background: color-mix(in srgb, var(--bg) 40%, transparent);
+      transition: 180ms ease;
+    }
+
+    .focus-item:hover,
+    .done-item:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 58%, transparent);
+    }
+
+    .focus-item.empty {
+      opacity: 0.76;
+    }
+
+    .done-item.fresh {
+      animation: pulse-done 900ms ease;
+    }
+
+    @keyframes pulse-done {
+      0% {
+        transform: scale(0.98);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 38%, transparent);
+      }
+      45% {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: none;
+      }
+    }
+
+    .complete-hit,
+    .ghost-hit,
+    .action-btn {
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+      color: var(--text);
+      cursor: pointer;
+      transition: 180ms ease;
+      font: inherit;
+    }
+
+    .complete-hit {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      color: var(--accent);
+      font-family: var(--display-font);
+      flex: 0 0 auto;
+    }
+
+    .complete-hit:hover,
+    .ghost-hit:hover,
+    .action-btn:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 68%, white);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .ghost-hit {
+      border-radius: 10px;
+      padding: 6px 10px;
+      color: var(--muted);
+    }
+
+    .action-btn {
+      border-radius: 14px;
+      padding: 13px 16px;
+      min-width: 112px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--display-font);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--panel-strong) 94%, transparent));
+      color: var(--accent-3);
+    }
+
+    .panel-section {
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .done-item .done-mark {
+      color: var(--success);
+      font-size: 1rem;
+    }
+
+    .done-item .text-input,
+    .focus-item .text-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notes-input {
+      min-height: 96px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .archive-card {
+      padding: 18px;
+    }
+
+    .archive-card[hidden] {
+      display: none;
+    }
+
+    details.archive-entry {
+      border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--bg) 42%, transparent);
+    }
+
+    .archive-entry summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .archive-entry summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .archive-meta {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .archive-body {
+      margin-top: 12px;
+      display: grid;
+      gap: 12px;
+      color: var(--muted);
+    }
+
+    .archive-body strong {
+      color: var(--text);
+      font-family: var(--display-font);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    .inline-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+      color: var(--text);
+      font-size: 0.88rem;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    [data-theme="hacker"] .row-prefix::after,
+    [data-theme="hacker"] .focus-title::after {
+      content: '_';
+      margin-left: 2px;
+      animation: blink 900ms steps(1) infinite;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @media (max-width: 920px) {
+      .focus-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .meta-panel {
+        justify-items: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell {
+        padding-inline: 14px;
+      }
+
+      .one-thing-row,
+      .done-entry {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .action-btn {
+        width: 100%;
+      }
+
+      .archive-entry summary {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="theme-strip" id="themeSwitcher" aria-label="Theme selector"></div>
+      <div class="meta-panel">
+        <div class="week-label">Week: <span id="weekRange"></span></div>
+        <div class="sync-indicator" id="syncStatus">Loading…</div>
+      </div>
+    </header>
+
+    <section class="banner" id="softPrompt" hidden></section>
+
+    <section class="card hero">
+      <div class="card-label">Today's One Thing</div>
+      <div class="one-thing-row">
+        <div class="interactive-row" id="oneThingRow">
+          <span class="row-prefix">&gt;</span>
+          <input id="oneThingInput" class="text-input one-thing-input" type="text" placeholder="Click here and name the one thing.">
+        </div>
+        <button id="oneThingDone" class="action-btn primary" type="button">Done</button>
+      </div>
+    </section>
+
+    <section class="focus-grid" id="focusGrid" aria-label="Weekly focus"></section>
+
+    <section class="card panel-section">
+      <div class="card-heading">Done Today</div>
+      <ul id="doneList" class="done-list"></ul>
+      <div class="done-entry" style="margin-top: 14px;">
+        <div class="interactive-row">
+          <span class="row-prefix">✓</span>
+          <input id="doneInput" class="text-input" type="text" placeholder="+ add something done…">
+        </div>
+        <button id="addDoneBtn" class="action-btn" type="button">Add</button>
+      </div>
+    </section>
+
+    <section class="card panel-section">
+      <div class="card-heading">Notes</div>
+      <textarea id="notesInput" class="notes-input" placeholder="Loose thoughts, not obligations."></textarea>
+    </section>
+
+    <div class="actions">
+      <button id="newWeekBtn" class="action-btn primary" type="button">New Week</button>
+      <button id="archiveBtn" class="action-btn" type="button">Archive</button>
+    </div>
+
+    <section id="archiveSection" class="card archive-card" hidden>
+      <div class="card-heading">Archive</div>
+      <div id="archiveList" class="archive-list"></div>
+      <div class="footer-note">Set <code>S3_URL</code> in this file to your bucket endpoint for cross-device sync.</div>
+    </section>
+  </div>
+
+  <script>
+    const S3_URL = 'https://your-bucket.s3.amazonaws.com/productivity-data.json';
+    const STORAGE_KEY = 'mirror-productivity-data';
+    const THEMES = [
+      { key: 'brs', label: 'Black Rock Shooter', icon: '★', dotA: '#00d4d4', dotB: '#cc2244' },
+      { key: 'esports', label: 'E-Sports', icon: '✦', dotA: '#c89b3c', dotB: '#ff4655' },
+      { key: 'hacker', label: 'L337 H4XX0R', icon: '>_', dotA: '#00ff41', dotB: '#ffb000' },
+      { key: 'racing', label: 'Racing', icon: '▣', dotA: '#e8000d', dotB: '#ffd700' },
+      { key: 'frieren', label: 'Frieren', icon: '✧', dotA: '#7a9e7e', dotB: '#c9a84c' },
+      { key: 'math', label: 'Math', icon: '∿', dotA: '#33ff66', dotB: '#ff6b35' },
+      { key: 'mecha', label: 'Mecha', icon: '◎', dotA: '#ff2d78', dotB: '#00a8ff' }
+    ];
+    const CATEGORY_CONFIG = [
+      { key: 'business', label: 'Business' },
+      { key: 'school', label: 'School' },
+      { key: 'personal', label: 'Personal' }
+    ];
+    const state = {
+      data: null,
+      saveTimer: null,
+      isArchiveVisible: false,
+      latestDone: null
+    };
+
+    function todayIso() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function createDefaultData() {
+      return {
+        week: {
+          start: getWeekStartIso(new Date()),
+          focus: {
+            business: ['Deploy client frontend', 'Send invoice to congresswoman', 'Follow up on patent'],
+            school: ['Study Kohonen for exam', 'Final project: load dataset', 'Read Shannon paper'],
+            personal: ['Call sister', 'Car service in Guadalajara', 'Renew e.firma']
+          }
+        },
+        today: {
+          date: todayIso(),
+          one_thing: 'Deploy client frontend',
+          done: ['Showered before standup', 'Took Ritalin'],
+          notes: ''
+        },
+        archive: []
+      };
+    }
+
+    function deepCopy(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function getWeekStartIso(dateLike) {
+      const date = new Date(dateLike);
+      const day = date.getDay();
+      const diff = (day + 6) % 7;
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - diff);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function addDays(isoDate, days) {
+      const date = new Date(isoDate + 'T00:00:00');
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function formatWeekRange(startIso) {
+      const start = new Date(startIso + 'T00:00:00');
+      const end = new Date(addDays(startIso, 6) + 'T00:00:00');
+      const monthDay = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+      const withYear = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return start.getFullYear() === end.getFullYear()
+        ? `${monthDay.format(start)} – ${withYear.format(end)}`
+        : `${withYear.format(start)} – ${withYear.format(end)}`;
+    }
+
+    function normalizeSlots(value) {
+      const list = Array.isArray(value) ? value.slice(0, 3) : [];
+      while (list.length < 3) {
+        list.push('');
+      }
+      return list.map(item => typeof item === 'string' ? item : '');
+    }
+
+    function normalizeData(raw) {
+      const fallback = createDefaultData();
+      const data = raw && typeof raw === 'object' ? raw : {};
+      const normalized = {
+        week: {
+          start: typeof data.week?.start === 'string' ? data.week.start : fallback.week.start,
+          focus: {
+            business: normalizeSlots(data.week?.focus?.business ?? fallback.week.focus.business),
+            school: normalizeSlots(data.week?.focus?.school ?? fallback.week.focus.school),
+            personal: normalizeSlots(data.week?.focus?.personal ?? fallback.week.focus.personal)
+          }
+        },
+        today: {
+          date: typeof data.today?.date === 'string' ? data.today.date : fallback.today.date,
+          one_thing: typeof data.today?.one_thing === 'string' ? data.today.one_thing : fallback.today.one_thing,
+          done: Array.isArray(data.today?.done) ? data.today.done.filter(item => typeof item === 'string') : fallback.today.done,
+          notes: typeof data.today?.notes === 'string' ? data.today.notes : fallback.today.notes
+        },
+        archive: Array.isArray(data.archive) ? data.archive : []
+      };
+
+      if (normalized.today.date !== todayIso()) {
+        normalized.today = {
+          date: todayIso(),
+          one_thing: normalized.today.one_thing,
+          done: [],
+          notes: normalized.today.notes
+        };
+      }
+
+      return normalized;
+    }
+
+    function setSyncStatus(text, tone = '') {
+      const el = document.getElementById('syncStatus');
+      el.textContent = text;
+      el.className = `sync-indicator ${tone}`.trim();
+    }
+
+    async function loadData() {
+      const bucketConfigured = !S3_URL.includes('your-bucket');
+      const localBackup = localStorage.getItem(STORAGE_KEY);
+
+      if (bucketConfigured) {
+        try {
+          const response = await fetch(S3_URL, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`GET ${response.status}`);
+          }
+          state.data = normalizeData(await response.json());
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+          setSyncStatus('Synced from S3', 'good');
+          return;
+        } catch (error) {
+          console.warn('S3 load failed, falling back to local backup.', error);
+        }
+      }
+
+      if (localBackup) {
+        state.data = normalizeData(JSON.parse(localBackup));
+        setSyncStatus(bucketConfigured ? 'Local backup active' : 'Local only — set S3_URL', bucketConfigured ? 'warn' : '');
+        return;
+      }
+
+      state.data = createDefaultData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      setSyncStatus(bucketConfigured ? 'Using default data' : 'Local only — set S3_URL', bucketConfigured ? 'warn' : '');
+    }
+
+    async function persistData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      const bucketConfigured = !S3_URL.includes('your-bucket');
+
+      if (!bucketConfigured) {
+        setSyncStatus('Saved locally — configure S3_URL for sync');
+        return;
+      }
+
+      try {
+        setSyncStatus('Saving…');
+        const response = await fetch(S3_URL, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.data)
+        });
+
+        if (!response.ok) {
+          throw new Error(`PUT ${response.status}`);
+        }
+
+        setSyncStatus(`Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, 'good');
+      } catch (error) {
+        console.warn('S3 save failed. Local backup remains available.', error);
+        setSyncStatus('S3 unavailable — local backup kept', 'warn');
+      }
+    }
+
+    function scheduleSave() {
+      window.clearTimeout(state.saveTimer);
+      setSyncStatus('Save queued…');
+      state.saveTimer = window.setTimeout(persistData, 250);
+    }
+
+    function setTheme(themeKey) {
+      document.documentElement.setAttribute('data-theme', themeKey);
+      localStorage.setItem('mirror-preferred-theme', themeKey);
+      renderThemeSwitcher();
+    }
+
+    function renderThemeSwitcher() {
+      const container = document.getElementById('themeSwitcher');
+      const activeTheme = document.documentElement.getAttribute('data-theme') || 'brs';
+      container.innerHTML = '';
+
+      THEMES.forEach(theme => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `theme-pill${theme.key === activeTheme ? ' active' : ''}`;
+        button.innerHTML = `
+          <span class="theme-dot" style="--dot-a:${theme.dotA}; --dot-b:${theme.dotB}"></span>
+          <span>${theme.icon}</span>
+          <span>${theme.label}</span>
+        `;
+        button.addEventListener('click', () => setTheme(theme.key));
+        container.appendChild(button);
+      });
+    }
+
+    function renderPrompt() {
+      const promptEl = document.getElementById('softPrompt');
+      const storedWeek = new Date(state.data.week.start + 'T00:00:00');
+      const currentWeek = new Date(getWeekStartIso(new Date()) + 'T00:00:00');
+      const deltaDays = Math.round((currentWeek - storedWeek) / 86400000);
+      const day = new Date().getDay();
+
+      let message = '';
+      if (deltaDays >= 7) {
+        message = '<strong>Soft prompt:</strong> This week is older than 7 days. Archive it or start fresh.';
+      } else if (day === 0) {
+        message = '<strong>Sunday evening:</strong> New week. What are the 3 things that matter for business, school, and personal?';
+      } else if (day === 5) {
+        message = '<strong>Friday evening:</strong> Week done. What moved? Archive it.';
+      }
+
+      promptEl.hidden = !message;
+      promptEl.innerHTML = message;
+    }
+
+    function renderOneThing() {
+      document.getElementById('weekRange').textContent = formatWeekRange(state.data.week.start);
+      document.getElementById('oneThingInput').value = state.data.today.one_thing;
+      document.getElementById('notesInput').value = state.data.today.notes;
+      document.getElementById('archiveBtn').textContent = `Archive${state.data.archive.length ? ` (${state.data.archive.length})` : ''}`;
+    }
+
+    function renderFocusGrid() {
+      const grid = document.getElementById('focusGrid');
+      grid.innerHTML = '';
+
+      CATEGORY_CONFIG.forEach(category => {
+        const card = document.createElement('section');
+        card.className = 'card focus-card';
+        card.innerHTML = `
+          <div class="focus-header">
+            <div class="focus-title">${category.label}</div>
+            <div class="focus-cap">up to 3</div>
+          </div>
+          <div class="focus-list"></div>
+        `;
+
+        const list = card.querySelector('.focus-list');
+        state.data.week.focus[category.key].forEach((value, index) => {
+          const item = document.createElement('div');
+          item.className = `focus-item${value ? '' : ' empty'}`;
+
+          const completeButton = document.createElement('button');
+          completeButton.type = 'button';
+          completeButton.className = 'complete-hit';
+          completeButton.textContent = document.documentElement.getAttribute('data-theme') === 'hacker' ? '[ ]' : '○';
+          completeButton.setAttribute('aria-label', `Mark ${category.label} item ${index + 1} done`);
+          completeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            completeFocusItem(category.key, index);
+          });
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'text-input';
+          input.placeholder = `Focus ${index + 1}`;
+          input.value = value;
+          input.addEventListener('click', event => event.stopPropagation());
+          input.addEventListener('input', event => {
+            state.data.week.focus[category.key][index] = event.target.value.slice(0, 140);
+            scheduleSave();
+          });
+
+          const clearButton = document.createElement('button');
+          clearButton.type = 'button';
+          clearButton.className = 'ghost-hit';
+          clearButton.textContent = '×';
+          clearButton.setAttribute('aria-label', `Clear ${category.label} item ${index + 1}`);
+          clearButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            state.data.week.focus[category.key][index] = '';
+            renderFocusGrid();
+            scheduleSave();
+          });
+
+          item.addEventListener('click', () => {
+            if (value.trim()) {
+              completeFocusItem(category.key, index);
+            } else {
+              input.focus();
+            }
+          });
+
+          item.append(completeButton, input, clearButton);
+          list.appendChild(item);
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function renderDoneList() {
+      const list = document.getElementById('doneList');
+      list.innerHTML = '';
+
+      if (!state.data.today.done.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'Nothing logged yet. Add a win before noon.';
+        list.appendChild(empty);
+        return;
+      }
+
+      state.data.today.done.forEach((entry, index) => {
+        const row = document.createElement('li');
+        const isFresh = state.latestDone
+          && index === 0
+          && entry === state.latestDone.text
+          && (Date.now() - state.latestDone.time) < 1200;
+
+        row.className = `done-item${isFresh ? ' fresh' : ''}`;
+        row.innerHTML = `<span class="done-mark">${document.documentElement.getAttribute('data-theme') === 'hacker' ? '[OK]' : '✓'}</span>`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'text-input';
+        input.value = entry;
+        input.addEventListener('input', event => {
+          state.data.today.done[index] = event.target.value.slice(0, 140);
+          scheduleSave();
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'ghost-hit';
+        deleteButton.textContent = '×';
+        deleteButton.addEventListener('click', () => {
+          state.data.today.done.splice(index, 1);
+          renderDoneList();
+          scheduleSave();
+        });
+
+        row.append(input, deleteButton);
+        list.appendChild(row);
+      });
+    }
+
+    function renderArchive() {
+      const section = document.getElementById('archiveSection');
+      section.hidden = !state.isArchiveVisible;
+
+      const container = document.getElementById('archiveList');
+      container.innerHTML = '';
+
+      if (!state.data.archive.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'Archive is empty. When you start a new week, the old one lands here.';
+        container.appendChild(empty);
+        return;
+      }
+
+      state.data.archive.forEach(entry => {
+        const details = document.createElement('details');
+        details.className = 'archive-entry';
+
+        const weekStart = entry.week?.start || todayIso();
+        const archivedAt = entry.archivedAt
+          ? new Date(entry.archivedAt).toLocaleString()
+          : 'Unknown archive time';
+        const focus = entry.week?.focus || {};
+        const done = Array.isArray(entry.today?.done) ? entry.today.done : [];
+
+        details.innerHTML = `
+          <summary>
+            <span>${formatWeekRange(weekStart)}</span>
+            <span class="archive-meta">${archivedAt}</span>
+          </summary>
+          <div class="archive-body">
+            <div>
+              <strong>One thing</strong>
+              <div>${entry.today?.one_thing || '—'}</div>
+            </div>
+            <div>
+              <strong>Business</strong>
+              <div class="inline-list">${(focus.business || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+            </div>
+            <div>
+              <strong>School</strong>
+              <div class="inline-list">${(focus.school || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+            </div>
+            <div>
+              <strong>Personal</strong>
+              <div class="inline-list">${(focus.personal || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+            </div>
+            <div>
+              <strong>Done today</strong>
+              <div class="inline-list">${done.map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(details);
+      });
+    }
+
+    function render() {
+      renderThemeSwitcher();
+      renderPrompt();
+      renderOneThing();
+      renderFocusGrid();
+      renderDoneList();
+      renderArchive();
+    }
+
+    function queueDoneEntry(text) {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      state.data.today.date = todayIso();
+      state.data.today.done.unshift(trimmed);
+      state.latestDone = { text: trimmed, time: Date.now() };
+    }
+
+    function normalizedText(value) {
+      return value.trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function completeOneThing() {
+      const text = state.data.today.one_thing.trim();
+      if (!text) {
+        return;
+      }
+
+      const needle = normalizedText(text);
+      CATEGORY_CONFIG.forEach(category => {
+        state.data.week.focus[category.key] = state.data.week.focus[category.key].map(item =>
+          normalizedText(item) === needle ? '' : item
+        );
+      });
+
+      state.data.today.one_thing = '';
+      queueDoneEntry(text);
+      render();
+      scheduleSave();
+    }
+
+    function completeFocusItem(categoryKey, index) {
+      const text = state.data.week.focus[categoryKey][index].trim();
+      if (!text) {
+        return;
+      }
+
+      state.data.week.focus[categoryKey][index] = '';
+      if (normalizedText(state.data.today.one_thing) === normalizedText(text)) {
+        state.data.today.one_thing = '';
+      }
+
+      queueDoneEntry(text);
+      render();
+      scheduleSave();
+    }
+
+    function addDoneFromInput() {
+      const input = document.getElementById('doneInput');
+      const value = input.value.trim();
+      if (!value) {
+        return;
+      }
+
+      queueDoneEntry(value);
+      input.value = '';
+      renderDoneList();
+      scheduleSave();
+    }
+
+    function startNewWeek() {
+      const confirmed = window.confirm('Archive this week and open a fresh one?');
+      if (!confirmed) {
+        return;
+      }
+
+      state.data.archive.unshift({
+        archivedAt: new Date().toISOString(),
+        week: deepCopy(state.data.week),
+        today: deepCopy(state.data.today)
+      });
+
+      const carryForward = {};
+      CATEGORY_CONFIG.forEach(category => {
+        carryForward[category.key] = normalizeSlots(
+          state.data.week.focus[category.key].filter(item => item.trim())
+        );
+      });
+
+      const currentWeekStart = new Date(state.data.week.start + 'T00:00:00');
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      const nextWeekStart = getWeekStartIso(
+        currentWeekStart > new Date() ? currentWeekStart : new Date()
+      );
+
+      state.data.week = {
+        start: nextWeekStart,
+        focus: carryForward
+      };
+      state.data.today = {
+        date: todayIso(),
+        one_thing: '',
+        done: [],
+        notes: ''
+      };
+
+      render();
+      scheduleSave();
+    }
+
+    function bindStaticEvents() {
+      document.getElementById('oneThingInput').addEventListener('input', event => {
+        state.data.today.one_thing = event.target.value.slice(0, 180);
+        scheduleSave();
+      });
+
+      document.getElementById('oneThingRow').addEventListener('click', () => {
+        document.getElementById('oneThingInput').focus();
+      });
+
+      document.getElementById('oneThingDone').addEventListener('click', completeOneThing);
+      document.getElementById('addDoneBtn').addEventListener('click', addDoneFromInput);
+      document.getElementById('doneInput').addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addDoneFromInput();
+        }
+      });
+
+      document.getElementById('notesInput').addEventListener('input', event => {
+        state.data.today.notes = event.target.value.slice(0, 1000);
+        scheduleSave();
+      });
+
+      document.getElementById('newWeekBtn').addEventListener('click', startNewWeek);
+      document.getElementById('archiveBtn').addEventListener('click', () => {
+        state.isArchiveVisible = !state.isArchiveVisible;
+        renderArchive();
+        if (state.isArchiveVisible) {
+          document.getElementById('archiveSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
+    (async function init() {
+      await loadData();
+      bindStaticEvents();
+      render();
+    }());
+  </script>
+</body>
+</html>
