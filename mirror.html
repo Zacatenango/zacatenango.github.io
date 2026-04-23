@@ -919,10 +919,19 @@
       state.saveTimer = window.setTimeout(persistData, 250);
     }
 
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
     function setTheme(themeKey) {
       document.documentElement.setAttribute('data-theme', themeKey);
       localStorage.setItem('mirror-preferred-theme', themeKey);
-      renderThemeSwitcher();
+      render();
     }
 
     function renderThemeSwitcher() {
@@ -1025,7 +1034,7 @@
           });
 
           item.addEventListener('click', () => {
-            if (value.trim()) {
+            if (state.data.week.focus[category.key][index].trim()) {
               completeFocusItem(category.key, index);
             } else {
               input.focus();
@@ -1120,23 +1129,23 @@
           <div class="archive-body">
             <div>
               <strong>One thing</strong>
-              <div>${entry.today?.one_thing || '—'}</div>
+              <div>${escapeHtml(entry.today?.one_thing || '—')}</div>
             </div>
             <div>
               <strong>Business</strong>
-              <div class="inline-list">${(focus.business || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+              <div class="inline-list">${(focus.business || []).filter(Boolean).map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
             </div>
             <div>
               <strong>School</strong>
-              <div class="inline-list">${(focus.school || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+              <div class="inline-list">${(focus.school || []).filter(Boolean).map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
             </div>
             <div>
               <strong>Personal</strong>
-              <div class="inline-list">${(focus.personal || []).filter(Boolean).map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+              <div class="inline-list">${(focus.personal || []).filter(Boolean).map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
             </div>
             <div>
               <strong>Done today</strong>
-              <div class="inline-list">${done.map(item => `<span class="chip">${item}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+              <div class="inline-list">${done.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
             </div>
           </div>
         `;
