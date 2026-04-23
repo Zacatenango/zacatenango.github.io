@@ -727,11 +727,13 @@
     <section id="archiveSection" class="card archive-card" hidden>
       <div class="card-heading">Archive</div>
       <div id="archiveList" class="archive-list"></div>
-      <div class="footer-note">Set the <code>S3_URL</code> constant in this page's script to your bucket endpoint for cross-device sync.</div>
+      <div class="footer-note">Set the <code>S3_URL</code> constant in this page's script to a personal bucket endpoint or presigned URL, and allow CORS from your GitHub Pages domain. Do not make a bucket publicly writable just to support browser saves.</div>
     </section>
   </div>
 
   <script>
+    // Personal-use option: point this at a controlled bucket endpoint or presigned URL.
+    // Do not expose a publicly writable bucket; browser PUT access should stay limited.
     const S3_URL = 'https://your-bucket.s3.amazonaws.com/productivity-data.json';
     const STORAGE_KEY = 'mirror-productivity-data';
     const THEMES = [
