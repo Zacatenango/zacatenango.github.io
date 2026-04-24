@@ -858,9 +858,9 @@
     ];
     const state = {
       data: null,
-      saveTimer: null,
       isArchiveVisible: false,
-      latestDone: null
+      latestDone: null,
+      dirtyForS3: false
     };
 
     function todayIso() {
@@ -997,11 +997,9 @@
       setSyncStatus(bucketConfigured ? 'Using default data' : 'Local only — set S3_URL', bucketConfigured ? 'warn' : '');
     }
 
-    async function persistData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      const bucketConfigured = isS3Configured();
-
-      if (!bucketConfigured) {
+    async function syncToS3() {
+      if (!state.dirtyForS3) return;
+      if (!isS3Configured()) {
         setSyncStatus('Saved locally — configure S3_URL for sync');
         return;
       }
@@ -1018,6 +1016,7 @@
           throw new Error(`PUT ${response.status}`);
         }
 
+        state.dirtyForS3 = false;
         setSyncStatus(`Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, 'good');
       } catch (error) {
         console.warn('S3 save failed. Local backup remains available.', error);
@@ -1026,9 +1025,11 @@
     }
 
     function scheduleSave() {
-      window.clearTimeout(state.saveTimer);
-      setSyncStatus('Save queued…');
-      state.saveTimer = window.setTimeout(persistData, 250);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      if (!state.dirtyForS3) {
+        setSyncStatus('Pending sync…');
+        state.dirtyForS3 = true;
+      }
     }
 
     function escapeHtml(value) {
@@ -1471,6 +1472,7 @@
       await loadData();
       bindStaticEvents();
       render();
+      setInterval(syncToS3, 10_000);
     }());
   </script>
 </body>
