@@ -730,6 +730,54 @@
       50%, 100% { opacity: 0; }
     }
 
+    /* ── Mascot quote box ─────────────────────────────── */
+    .mascot-box {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .mascot-avatar-wrap {
+      flex: 0 0 auto;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 30%, transparent);
+      overflow: hidden;
+      background: color-mix(in srgb, var(--accent) 12%, var(--bg-alt));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mascot-avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .mascot-avatar-placeholder {
+      font-size: 2rem;
+      color: var(--muted);
+      line-height: 1;
+      text-align: center;
+    }
+
+    .mascot-quote {
+      margin: 0;
+      padding-left: 18px;
+      border-left: 3px solid var(--accent);
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    /* ── end mascot box ────────────────────────────────── */
+
     @media (max-width: 920px) {
       .focus-grid {
         grid-template-columns: 1fr;
@@ -783,6 +831,24 @@
         </div>
         <button id="oneThingDone" class="action-btn primary" type="button">Done</button>
       </div>
+    </section>
+
+    <!--
+      MASCOT IMAGES — place your avatar images at the paths below.
+      Each file should be a square image (recommended: 192×192 px or larger).
+        images/mascot-brs.png      — Black Rock Shooter
+        images/mascot-esports.png  — E-Sports
+        images/mascot-hacker.png   — L337 H4XX0R
+        images/mascot-racing.png   — Racing
+        images/mascot-frieren.png  — Frieren
+        images/mascot-math.png     — Math
+        images/mascot-mecha.png    — Mecha
+    -->
+    <section class="card mascot-box" id="mascotBox" hidden aria-label="Theme mascot">
+      <div class="mascot-avatar-wrap" id="mascotAvatarWrap">
+        <!-- Avatar image is injected by renderMascot() -->
+      </div>
+      <blockquote class="mascot-quote" id="mascotQuote"></blockquote>
     </section>
 
     <section class="focus-grid" id="focusGrid" aria-label="Weekly focus"></section>
@@ -856,6 +922,15 @@
       { key: 'school', label: 'School' },
       { key: 'personal', label: 'Personal' }
     ];
+    const THEME_MASCOTS = {
+      brs:     { quote: 'As long as I\'m still alive, I\'ll be fighting for you, because I love you…', avatar: 'images/mascot-brs.png',     alt: 'Black Rock Shooter avatar' },
+      esports: { quote: 'Let\'s win! We\'ve practiced and we\'re ready!',                              avatar: 'images/mascot-esports.png',  alt: 'E-Sports mascot avatar' },
+      hacker:  { quote: 'Remember when you hacked the Matrix in telecommunications engineering…',     avatar: 'images/mascot-hacker.png',   alt: 'Hacker avatar' },
+      racing:  { quote: 'Only the best can rule the Wangan Line!',                                    avatar: 'images/mascot-racing.png',   alt: 'Racing avatar' },
+      frieren: { quote: 'True heroes are heroes in the big things and in everyday life',              avatar: 'images/mascot-frieren.png',  alt: 'Frieren avatar' },
+      math:    { quote: 'The entropy of the bits tell you how much you can compress',                 avatar: 'images/mascot-math.png',     alt: 'Math avatar' },
+      mecha:   { quote: '',                                                                            avatar: 'images/mascot-mecha.png',   alt: 'Mecha avatar' }
+    };
     const state = {
       data: null,
       isArchiveVisible: false,
@@ -1270,9 +1345,40 @@
       });
     }
 
+    function renderMascot() {
+      const theme = document.documentElement.getAttribute('data-theme') || 'brs';
+      const mascot = THEME_MASCOTS[theme];
+      const box = document.getElementById('mascotBox');
+
+      if (!mascot || !mascot.quote) {
+        box.hidden = true;
+        return;
+      }
+
+      box.hidden = false;
+      document.getElementById('mascotQuote').textContent = mascot.quote;
+
+      const wrap = document.getElementById('mascotAvatarWrap');
+      wrap.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = mascot.avatar;
+      img.alt = mascot.alt;
+      img.className = 'mascot-avatar';
+      img.onerror = function () {
+        wrap.innerHTML = '';
+        const placeholder = document.createElement('span');
+        placeholder.className = 'mascot-avatar-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.textContent = '?';
+        wrap.appendChild(placeholder);
+      };
+      wrap.appendChild(img);
+    }
+
     function render() {
       renderThemeSwitcher();
       renderPrompt();
+      renderMascot();
       renderOneThing();
       renderFocusGrid();
       renderDoneList();
