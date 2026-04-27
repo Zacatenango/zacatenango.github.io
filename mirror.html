@@ -639,6 +639,29 @@
       font-style: italic;
     }
 
+    .day-log-grid {
+      display: grid;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .day-log-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .day-log-label {
+      color: var(--text);
+      font-family: var(--display-font);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      flex: 0 0 auto;
+      min-width: 120px;
+    }
+
     .footer-note {
       margin-top: 16px;
       color: var(--muted);
@@ -870,6 +893,11 @@
       <textarea id="notesInput" class="notes-input" placeholder="Loose thoughts, not obligations."></textarea>
     </section>
 
+    <section id="weekSummarySection" class="card panel-section" hidden>
+      <div class="card-heading">Week So Far</div>
+      <div id="weekSummaryList" class="archive-list"></div>
+    </section>
+
     <div class="actions">
       <button id="newWeekBtn" class="action-btn primary" type="button">New Week</button>
       <button id="archiveBtn" class="action-btn" type="button">Archive</button>
@@ -950,7 +978,8 @@
             business: ['Deploy client frontend', 'Send invoice to congresswoman', 'Follow up on patent'],
             school: ['Study Kohonen for exam', 'Final project: load dataset', 'Read Shannon paper'],
             personal: ['Call sister', 'Car service in Guadalajara', 'Renew e.firma']
-          }
+          },
+          days: []
         },
         today: {
           date: todayIso(),
@@ -999,6 +1028,26 @@
       return list.map(item => typeof item === 'string' ? item : '');
     }
 
+    function normalizeDays(raw) {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .filter(d => d && typeof d === 'object' && typeof d.date === 'string')
+        .map(d => ({
+          date: d.date,
+          one_thing: typeof d.one_thing === 'string' ? d.one_thing : '',
+          done: Array.isArray(d.done) ? d.done.filter(i => typeof i === 'string') : [],
+          notes: typeof d.notes === 'string' ? d.notes : ''
+        }));
+    }
+
+    function sortedDays(days) {
+      return [...days].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function dayLocalLabel(isoDate, format) {
+      return new Date(isoDate + 'T00:00:00').toLocaleDateString('en-US', format);
+    }
+
     function normalizeData(raw) {
       const fallback = createDefaultData();
       const data = raw && typeof raw === 'object' ? raw : {};
@@ -1009,7 +1058,8 @@
             business: normalizeSlots(data.week?.focus?.business ?? fallback.week.focus.business),
             school: normalizeSlots(data.week?.focus?.school ?? fallback.week.focus.school),
             personal: normalizeSlots(data.week?.focus?.personal ?? fallback.week.focus.personal)
-          }
+          },
+          days: normalizeDays(data.week?.days)
         },
         today: {
           date: typeof data.today?.date === 'string' ? data.today.date : fallback.today.date,
@@ -1021,6 +1071,15 @@
       };
 
       if (normalized.today.date !== todayIso()) {
+        const oldDate = normalized.today.date;
+        if (!normalized.week.days.some(d => d.date === oldDate)) {
+          normalized.week.days.push({
+            date: oldDate,
+            one_thing: normalized.today.one_thing,
+            done: normalized.today.done,
+            notes: normalized.today.notes
+          });
+        }
         normalized.today = {
           date: todayIso(),
           one_thing: normalized.today.one_thing,
@@ -1313,6 +1372,17 @@
         const focus = entry.week?.focus || {};
         const done = Array.isArray(entry.today?.done) ? entry.today.done : [];
 
+        const weekDays = Array.isArray(entry.week?.days) ? sortedDays(entry.week.days) : [];
+        const weekDaysHtml = weekDays.length
+          ? weekDays.map(day => {
+              const dayLabel = dayLocalLabel(day.date, { weekday: 'short', month: 'short', day: 'numeric' });
+              const chips = day.done.length
+                ? day.done.map(i => `<span class="chip">${escapeHtml(i)}</span>`).join('')
+                : '<span class="empty-state">—</span>';
+              return `<div class="day-log-row"><span class="day-log-label">${escapeHtml(dayLabel)}</span><div class="inline-list">${chips}</div></div>`;
+            }).join('')
+          : '<span class="empty-state">No daily logs</span>';
+
         details.innerHTML = `
           <summary>
             <span>${formatWeekRange(weekStart)}</span>
@@ -1336,8 +1406,8 @@
               <div class="inline-list">${(focus.personal || []).filter(Boolean).map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
             </div>
             <div>
-              <strong>Done today</strong>
-              <div class="inline-list">${done.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('') || '<span class="empty-state">None</span>'}</div>
+              <strong>Daily log</strong>
+              <div class="day-log-grid">${weekDaysHtml}</div>
             </div>
           </div>
         `;
@@ -1375,6 +1445,49 @@
       wrap.appendChild(img);
     }
 
+    function renderWeeklySummary() {
+      const section = document.getElementById('weekSummarySection');
+      const container = document.getElementById('weekSummaryList');
+      container.innerHTML = '';
+
+      const days = state.data.week.days;
+      if (!days.length) {
+        section.hidden = true;
+        return;
+      }
+
+      section.hidden = false;
+      const sorted = sortedDays(days);
+
+      sorted.forEach(day => {
+        const details = document.createElement('details');
+        details.className = 'archive-entry';
+
+        const dayLabel = dayLocalLabel(day.date, { weekday: 'long', month: 'short', day: 'numeric' });
+        const doneCount = day.done.length;
+
+        const chipsHtml = day.done.length
+          ? day.done.map(i => `<span class="chip">${escapeHtml(i)}</span>`).join('')
+          : '<span class="empty-state">Nothing logged</span>';
+
+        details.innerHTML = `
+          <summary>
+            <span>${escapeHtml(dayLabel)}</span>
+            <span class="archive-meta">${doneCount} item${doneCount !== 1 ? 's' : ''} done</span>
+          </summary>
+          <div class="archive-body">
+            ${day.one_thing ? `<div><strong>One thing</strong><div>${escapeHtml(day.one_thing)}</div></div>` : ''}
+            <div>
+              <strong>Done</strong>
+              <div class="inline-list">${chipsHtml}</div>
+            </div>
+            ${day.notes ? `<div><strong>Notes</strong><div>${escapeHtml(day.notes)}</div></div>` : ''}
+          </div>
+        `;
+        container.appendChild(details);
+      });
+    }
+
     function render() {
       renderThemeSwitcher();
       renderPrompt();
@@ -1382,6 +1495,7 @@
       renderOneThing();
       renderFocusGrid();
       renderDoneList();
+      renderWeeklySummary();
       renderArchive();
     }
 
@@ -1454,6 +1568,16 @@
         return;
       }
 
+      const todayEntry = {
+        date: state.data.today.date,
+        one_thing: state.data.today.one_thing,
+        done: state.data.today.done,
+        notes: state.data.today.notes
+      };
+      if (!state.data.week.days.some(d => d.date === todayEntry.date)) {
+        state.data.week.days.push(todayEntry);
+      }
+
       state.data.archive.unshift({
         archivedAt: new Date().toISOString(),
         week: deepCopy(state.data.week),
@@ -1475,7 +1599,8 @@
 
       state.data.week = {
         start: nextWeekStart,
-        focus: carryForward
+        focus: carryForward,
+        days: []
       };
       state.data.today = {
         date: todayIso(),
